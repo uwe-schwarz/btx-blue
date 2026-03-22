@@ -1,0 +1,260 @@
+@font-face {
+  font-family: "Bedstead";
+  src: url("/fonts/bedstead.otf") format("opentype");
+  font-display: swap;
+}
+
+:root {
+  --btx-bg: #03177d;
+  --btx-frame: #0c1760;
+  --btx-outer: #020612;
+  --btx-text: #f4f7ff;
+  --btx-dim: #85a4ff;
+  --btx-accent: #ffef73;
+  --btx-link: #89ffff;
+  --btx-link-hover: #ffffff;
+  --btx-danger: #ff7373;
+  --btx-screen-shadow: rgba(0, 8, 40, 0.65);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(27, 53, 153, 0.2), transparent 35%),
+    linear-gradient(180deg, #02050f 0%, #04081b 100%);
+  color: var(--btx-text);
+  font-family: "Bedstead", monospace;
+  -webkit-font-smoothing: none;
+  text-rendering: geometricPrecision;
+}
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+}
+
+.btx-screen-shell {
+  width: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.btx-screen {
+  position: relative;
+  width: min(92vw, calc(40ch + 4rem));
+  padding: 1.25rem;
+  border: 0.25rem solid #1634b9;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 16%),
+    var(--btx-frame);
+  box-shadow:
+    0 0 0 0.4rem rgba(10, 18, 68, 0.9),
+    0 1.6rem 4rem var(--btx-screen-shadow);
+}
+
+.btx-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0.5rem;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 10%),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.05) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  mix-blend-mode: screen;
+  opacity: 0.18;
+}
+
+.btx-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: repeat(24, minmax(0, 1fr));
+  width: 40ch;
+  min-height: calc(24 * 1.18em);
+  font-size: clamp(12px, 1.5vw, 23px);
+  line-height: 1.18;
+  letter-spacing: 0.02em;
+}
+
+.btx-line,
+.btx-status-line {
+  width: 40ch;
+  min-height: 1.18em;
+  max-height: 1.18em;
+  overflow: hidden;
+  white-space: pre;
+  text-shadow: 0 0 0.2rem rgba(162, 199, 255, 0.18);
+}
+
+.btx-line {
+  color: var(--btx-text);
+}
+
+.btx-line--default {
+  color: var(--btx-text);
+}
+
+.btx-line--accent {
+  color: var(--btx-accent);
+}
+
+.btx-line--dim {
+  color: var(--btx-dim);
+}
+
+.btx-line--warning {
+  color: var(--btx-danger);
+}
+
+.btx-line--success,
+.btx-line--link {
+  color: var(--btx-link);
+}
+
+.btx-line--link {
+  display: block;
+  text-decoration: none;
+}
+
+.btx-line--link:hover,
+.btx-line--link:focus-visible {
+  color: var(--btx-link-hover);
+  background: rgba(137, 255, 255, 0.12);
+  outline: none;
+}
+
+.btx-line--search {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  color: var(--btx-accent);
+}
+
+.btx-search-label {
+  flex: 0 0 auto;
+}
+
+.btx-search-input,
+.btx-nav-input {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--btx-text);
+  font: inherit;
+  padding: 0;
+  outline: none;
+}
+
+.btx-search-input {
+  width: 28ch;
+}
+
+.btx-search-input::placeholder,
+.btx-nav-input::placeholder {
+  color: var(--btx-dim);
+  opacity: 1;
+}
+
+.btx-search-input:focus-visible,
+.btx-nav-input:focus-visible {
+  background: rgba(255, 239, 115, 0.12);
+}
+
+.btx-search-result {
+  visibility: visible;
+}
+
+.btx-status-line {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  color: var(--btx-accent);
+}
+
+.btx-status-page {
+  color: var(--btx-link);
+}
+
+.btx-nav-form {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+}
+
+.btx-status-prompt {
+  color: var(--btx-accent);
+}
+
+.btx-nav-input {
+  width: 3ch;
+}
+
+.btx-status-link {
+  color: var(--btx-text);
+  text-decoration: none;
+  font: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.btx-status-link:hover,
+.btx-status-link:focus-visible {
+  color: var(--btx-link-hover);
+  outline: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 720px) {
+  .shell {
+    padding: 1rem 0.5rem;
+  }
+
+  .btx-screen {
+    width: min(100vw - 1rem, calc(40ch + 1.5rem));
+    padding: 0.65rem;
+  }
+
+  .btx-grid {
+    font-size: clamp(10px, 2.45vw, 15px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

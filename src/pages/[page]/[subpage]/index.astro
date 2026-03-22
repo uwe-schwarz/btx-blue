@@ -1,0 +1,29 @@
+---
+import BtxScreen from "@/components/btx/BtxScreen.astro";
+import BtxLayout from "@/layouts/BtxLayout.astro";
+import { getRenderedPages, getRenderedPage } from "@/lib/btx/page-registry";
+import { searchIndex } from "@/lib/btx/search";
+
+export function getStaticPaths() {
+  return getRenderedPages()
+    .filter((page) => page.subpage > 1)
+    .map((page) => ({
+      params: {
+        page: page.id,
+        subpage: String(page.subpage),
+      },
+    }));
+}
+
+const pageNumber = Astro.params.page as `${number}${number}${number}`;
+const subpage = Number(Astro.params.subpage);
+const page = getRenderedPage({ page: pageNumber, subpage });
+
+if (!page) {
+  throw new Error(`Seite ${pageNumber}/${subpage} fehlt.`);
+}
+---
+
+<BtxLayout title={`BTX Blue ${page.id}/${page.subpage}`} description={`${page.title} Folgeseite ${page.subpage}`}>
+  <BtxScreen page={page} searchIndex={page.id === "800" ? searchIndex : []} />
+</BtxLayout>

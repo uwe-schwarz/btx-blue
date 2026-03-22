@@ -1,0 +1,32 @@
+---
+import BtxPageBody from "@/components/btx/BtxPageBody.astro";
+import BtxStatusBar from "@/components/btx/BtxStatusBar.astro";
+import type { SearchEntry, BtxRenderedPage } from "@/lib/btx/types";
+
+interface Props {
+  page: BtxRenderedPage;
+  searchIndex?: SearchEntry[];
+}
+
+const { page, searchIndex = [] } = Astro.props;
+---
+
+<section class="btx-screen-shell" aria-label="BTX Bildschirmtext Seite">
+  <div class="btx-screen">
+    <div class="btx-grid">
+      {page.headerLines.map((line, index) => (
+        <div class={`btx-line ${index === 1 ? "btx-line--dim" : "btx-line--accent"}`}>{line}</div>
+      ))}
+      <BtxPageBody bodyLines={page.bodyLines} />
+      <BtxStatusBar currentPage={page.subpage > 1 ? `${page.id}/${page.subpage}` : page.id} />
+    </div>
+  </div>
+  {searchIndex.length > 0 && (
+    <script type="application/json" id="btx-search-index" is:inline set:html={JSON.stringify(searchIndex)} />
+  )}
+</section>
+
+<script>
+  import { initBtxScreen } from "@/components/btx/BtxInput";
+  initBtxScreen();
+</script>

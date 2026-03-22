@@ -1,0 +1,27 @@
+{
+  "name": "btx-blue",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "test": "vitest run",
+    "test:e2e": "pnpm build && node scripts/run-e2e.mjs",
+    "verify": "pnpm check && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "astro": "^6.0.8"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.8",
+    "@playwright/test": "^1.54.2",
+    "@techandsoftware/teletext-fonts": "^1.0.0",
+    "@types/node": "^25.5.0",
+    "typescript": "^5.9.2",
+    "vite": "^8.0.1",
+    "vitest": "^4.1.0"
+  }
+}

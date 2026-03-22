@@ -1,0 +1,29 @@
+---
+interface Props {
+  currentPage: string;
+}
+
+const { currentPage } = Astro.props;
+---
+
+<div class="btx-status-line">
+  <span class="btx-status-page">SEITE {currentPage}</span>
+  <form class="btx-nav-form" data-btx-nav-form>
+    <label class="sr-only" for="btx-nav-input">Seite eingeben</label>
+    <span class="btx-status-prompt">EINGABE</span>
+    <input
+      id="btx-nav-input"
+      class="btx-nav-input"
+      type="text"
+      inputmode="numeric"
+      maxlength="3"
+      autocomplete="off"
+      spellcheck="false"
+      aria-label="Dreistellige Seitennummer"
+      data-btx-nav-input
+    />
+  </form>
+  <a class="btx-status-link" href="/000">HOME</a>
+  <a class="btx-status-link" href="/800">SUCHE</a>
+  <button class="btx-status-link btx-status-link--button" type="button" data-btx-back-button>ZURUECK</button>
+</div>

@@ -1,0 +1,16 @@
+---
+import BtxScreen from "@/components/btx/BtxScreen.astro";
+import BtxLayout from "@/layouts/BtxLayout.astro";
+import { getRenderedPage } from "@/lib/btx/page-registry";
+import { searchIndex } from "@/lib/btx/search";
+
+const page = getRenderedPage({ page: "000" });
+
+if (!page) {
+  throw new Error("Seite 000 fehlt.");
+}
+---
+
+<BtxLayout title="BTX Blue 000" description="BTX Startseite fuer Uwe Schwarz auf btx.blue">
+  <BtxScreen page={page} searchIndex={page.id === "800" ? searchIndex : []} />
+</BtxLayout>

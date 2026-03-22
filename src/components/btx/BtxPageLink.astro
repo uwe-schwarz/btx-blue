@@ -1,0 +1,14 @@
+---
+interface Props {
+  ariaLabel?: string;
+  route: string;
+  text: string;
+  tone?: "default" | "accent" | "success";
+}
+
+const { ariaLabel, route, text, tone = "success" } = Astro.props;
+---
+
+<a class={`btx-line btx-line--link btx-line--${tone}`} href={route} aria-label={ariaLabel}>
+  {text}
+</a>

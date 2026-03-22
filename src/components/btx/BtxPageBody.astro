@@ -1,0 +1,56 @@
+---
+import type { BtxBodyLine } from "@/lib/btx/types";
+import BtxPageLink from "@/components/btx/BtxPageLink.astro";
+
+interface Props {
+  bodyLines: BtxBodyLine[];
+}
+
+const { bodyLines } = Astro.props;
+---
+
+{
+  bodyLines.map((line) => {
+    if (line.kind === "blank") {
+      return <div class="btx-line" aria-hidden="true">&nbsp;</div>;
+    }
+
+    if (line.kind === "link") {
+      return <BtxPageLink route={line.route} text={line.text} ariaLabel={line.ariaLabel} tone={line.tone} />;
+    }
+
+    if (line.kind === "search") {
+      return (
+        <label class="btx-line btx-line--search" for="btx-search-input">
+          <span class="btx-search-label">{line.text}</span>
+          <input
+            id="btx-search-input"
+            class="btx-search-input"
+            type="search"
+            maxlength="24"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder={line.placeholder}
+            aria-label="Suche im Seitenfinder"
+            data-btx-search-input
+          />
+        </label>
+      );
+    }
+
+    if (line.kind === "search-result") {
+      return (
+        <a
+          class="btx-line btx-line--link btx-line--success btx-search-result"
+          href="/800"
+          data-btx-search-result={line.slot}
+          aria-label={`Suchtreffer ${line.slot + 1}`}
+        >
+          STICHWORT EINGEBEN
+        </a>
+      );
+    }
+
+    return <div class={`btx-line btx-line--${line.tone ?? "default"}`}>{line.text || "\u00a0"}</div>;
+  })
+}
