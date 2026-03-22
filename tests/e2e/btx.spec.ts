@@ -48,3 +48,14 @@ test("fortsetzungsseiten sind direkt erreichbar", async ({ page }) => {
   await page.goto("/510/2");
   await expect(page.locator("body")).toContainText("SEITE 510/2");
 });
+
+test("weiter-link und 404-seite funktionieren", async ({ page }) => {
+  await page.goto("/000");
+  await page.getByRole("link", { name: "Naechste Folgeseite" }).click();
+  await expect(page).toHaveURL(/\/000\/2$/);
+
+  await page.goto("/404");
+  await expect(page.locator("body")).toContainText("SEITE NICHT VORHANDEN");
+  await page.getByRole("link", { name: "000 Zur Startseite" }).click();
+  await expect(page).toHaveURL(/\/000$/);
+});

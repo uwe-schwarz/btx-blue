@@ -1,5 +1,6 @@
 import type { LocalizedString } from "@/lib/localization";
 import type { BtxLink, BtxPageId } from "@/lib/btx/types";
+import { BTX_COLUMNS } from "@/lib/btx/constants";
 
 export function de(value: LocalizedString | string | undefined | null): string {
   if (!value) {
@@ -59,4 +60,14 @@ export function compactList(values: string[], maxItems: number): string[] {
 
 export function unique(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))];
+}
+
+export function fitToColumns(value: string, columns = BTX_COLUMNS): string {
+  const chars = Array.from(value);
+
+  if (chars.length >= columns) {
+    return chars.slice(0, columns).join("");
+  }
+
+  return `${value}${" ".repeat(columns - chars.length)}`;
 }

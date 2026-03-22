@@ -56,10 +56,14 @@ function initNavInput() {
   const navInput = document.querySelector<HTMLInputElement>("[data-btx-nav-input]");
   const navForm = document.querySelector<HTMLFormElement>("[data-btx-nav-form]");
   const backButton = document.querySelector<HTMLButtonElement>("[data-btx-back-button]");
+  const prevPageLink = document.querySelector<HTMLAnchorElement>(".btx-page-nav-link--left");
+  const nextPageLink = document.querySelector<HTMLAnchorElement>(".btx-page-nav-link--right");
 
   if (!navInput || !navForm) {
     return;
   }
+
+  navInput.value = "";
 
   const navigateToPage = () => {
     const value = navInput.value.replace(/\D/g, "");
@@ -96,6 +100,18 @@ function initNavInput() {
 
     if (event.key === "Escape") {
       navInput.value = "";
+      return;
+    }
+
+    if ((event.key === "PageUp" || event.key === "ArrowLeft") && prevPageLink) {
+      event.preventDefault();
+      window.location.assign(prevPageLink.href);
+      return;
+    }
+
+    if ((event.key === "PageDown" || event.key === "ArrowRight") && nextPageLink) {
+      event.preventDefault();
+      window.location.assign(nextPageLink.href);
       return;
     }
 

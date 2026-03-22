@@ -1,15 +1,16 @@
+import { BTX_BODY_ROWS } from "@/lib/btx/constants";
 import { paginateLines } from "@/lib/btx/paginate";
 import type { BtxBodyLine, BtxPageId, BtxRenderedPage, BtxRoute } from "@/lib/btx/types";
 import { buildPageDefinitions } from "@/lib/btx/content-map";
-import { shorten, toRoute, toUpperBtx } from "@/lib/btx/helpers";
+import { fitToColumns, shorten, toRoute, toUpperBtx } from "@/lib/btx/helpers";
 
 const pageDefinitions = buildPageDefinitions();
 
 function makeHeaderLines(id: BtxPageId, title: string, subpage: number, totalSubpages: number): [string, string, string] {
-  const topLine = `BTX.BLUE            UWE SCHWARZ ${id}`.slice(0, 40);
+  const topLine = fitToColumns(`BTX.BLUE            UWE SCHWARZ ${id}`);
   const secondLine = "========================================";
   const titleSuffix = totalSubpages > 1 ? ` ${subpage}/${totalSubpages}` : "";
-  const thirdLine = toUpperBtx(shorten(`${title}${titleSuffix}`, 40));
+  const thirdLine = fitToColumns(toUpperBtx(shorten(`${title}${titleSuffix}`, 40)));
   return [topLine, secondLine, thirdLine];
 }
 
@@ -22,21 +23,35 @@ function stripLineText(line: BtxBodyLine): string {
 }
 
 const renderedPages: BtxRenderedPage[] = pageDefinitions.flatMap((definition) => {
-  const paginated = paginateLines(definition.lines);
+  const paginated = paginateLines(definition.lines, BTX_BODY_ROWS - 1);
 
-  return paginated.map((bodyLines, index) => ({
-    id: definition.id,
-    title: definition.title,
-    keywords: definition.keywords,
-    subpage: index + 1,
-    route: toRoute(definition.id, index + 1),
-    headerLines: makeHeaderLines(definition.id, definition.title, index + 1, paginated.length),
-    bodyLines,
-    statusHint: "HOME 000  ZURUECK  SUCHE 800",
-    prevRoute: index > 0 ? toRoute(definition.id, index) : undefined,
-    nextRoute: index < paginated.length - 1 ? toRoute(definition.id, index + 2) : undefined,
-    homeRoute: "/000",
-  }));
+  return paginated.map((bodyLines, index) => {
+    const prevRoute = index > 0 ? toRoute(definition.id, index) : undefined;
+    const nextRoute = index < paginated.length - 1 ? toRoute(definition.id, index + 2) : undefined;
+
+    return {
+      id: definition.id,
+      title: definition.title,
+      keywords: definition.keywords,
+      subpage: index + 1,
+      route: toRoute(definition.id, index + 1),
+      headerLines: makeHeaderLines(definition.id, definition.title, index + 1, paginated.length),
+      bodyLines: [
+        ...bodyLines,
+        {
+          kind: "page-nav" as const,
+          prevRoute,
+          prevLabel: prevRoute ? `VORHER ${definition.id}/${index}` : undefined,
+          nextRoute,
+          nextLabel: nextRoute ? `WEITER ${definition.id}/${index + 2}` : undefined,
+        },
+      ],
+      statusHint: "HOME 000  ZURUECK  SUCHE 800",
+      prevRoute,
+      nextRoute,
+      homeRoute: "/000",
+    };
+  });
 });
 
 const renderedPageMap = new Map(renderedPages.map((page) => [page.route, page] as const));

@@ -23,7 +23,11 @@ const { currentPage } = Astro.props;
       data-btx-nav-input
     />
   </form>
-  <a class="btx-status-link" href="/000">HOME</a>
-  <a class="btx-status-link" href="/800">SUCHE</a>
-  <button class="btx-status-link btx-status-link--button" type="button" data-btx-back-button>ZURUECK</button>
+  <div class="btx-status-links">
+    <a class="btx-status-link" href="/000">HOME</a>
+    <a class="btx-status-link" href="/800">SUCHE</a>
+    <button class="btx-status-link btx-status-link--button" type="button" data-btx-back-button aria-label="Zurueck">
+      ZUR
+    </button>
+  </div>
 </div>

@@ -36,6 +36,13 @@ export type BtxBodyLine =
       slot: number;
     }
   | {
+      kind: "page-nav";
+      prevLabel?: string;
+      prevRoute?: string;
+      nextLabel?: string;
+      nextRoute?: string;
+    }
+  | {
       kind: "blank";
     };
 
