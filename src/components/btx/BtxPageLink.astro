@@ -1,6 +1,4 @@
 ---
-import BtxCellLine from "@/components/btx/BtxCellLine.astro";
-
 interface Props {
   ariaLabel?: string;
   route: string;
@@ -11,6 +9,4 @@ interface Props {
 const { ariaLabel, route, text, tone = "success" } = Astro.props;
 ---
 
-<a class={`btx-line btx-line--link btx-line--${tone}`} href={route} aria-label={ariaLabel}>
-  <BtxCellLine text={text} />
-</a>
+<a class={`btx-line btx-line--link btx-line--${tone}`} href={route} aria-label={ariaLabel}>{text}</a>

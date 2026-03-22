@@ -1,5 +1,4 @@
 ---
-import BtxCellLine from "@/components/btx/BtxCellLine.astro";
 import BtxPageBody from "@/components/btx/BtxPageBody.astro";
 import BtxStatusBar from "@/components/btx/BtxStatusBar.astro";
 import type { SearchEntry, BtxRenderedPage } from "@/lib/btx/types";
@@ -16,9 +15,7 @@ const { page, searchIndex = [] } = Astro.props;
   <div class="btx-screen">
     <div class="btx-grid">
       {page.headerLines.map((line, index) => (
-        <div class={`btx-line ${index === 1 ? "btx-line--dim" : "btx-line--accent"}`}>
-          <BtxCellLine text={line} />
-        </div>
+        <div class={`btx-line ${index === 1 ? "btx-line--dim" : "btx-line--accent"}`}>{line}</div>
       ))}
       <BtxPageBody bodyLines={page.bodyLines} />
       <BtxStatusBar currentPage={page.subpage > 1 ? `${page.id}/${page.subpage}` : page.id} />

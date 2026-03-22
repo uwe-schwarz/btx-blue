@@ -1,6 +1,5 @@
 ---
 import type { BtxBodyLine } from "@/lib/btx/types";
-import BtxCellLine from "@/components/btx/BtxCellLine.astro";
 import BtxPageLink from "@/components/btx/BtxPageLink.astro";
 
 interface Props {
@@ -13,11 +12,7 @@ const { bodyLines } = Astro.props;
 {
   bodyLines.map((line) => {
     if (line.kind === "blank") {
-      return (
-        <div class="btx-line" aria-hidden="true">
-          <BtxCellLine text="" />
-        </div>
-      );
+      return <div class="btx-line" aria-hidden="true">&nbsp;</div>;
     }
 
     if (line.kind === "link") {
@@ -61,30 +56,22 @@ const { bodyLines } = Astro.props;
         <div class="btx-line btx-line--page-nav">
           {line.prevRoute ? (
             <a class="btx-page-nav-link btx-page-nav-link--left" href={line.prevRoute} aria-label="Vorherige Folgeseite">
-              <BtxCellLine columns={20} text={line.prevLabel ?? ""} />
+              {line.prevLabel ?? ""}
             </a>
           ) : (
-            <span class="btx-page-nav-empty">
-              <BtxCellLine columns={20} text="" />
-            </span>
+            <span class="btx-page-nav-empty">&nbsp;</span>
           )}
           {line.nextRoute ? (
             <a class="btx-page-nav-link btx-page-nav-link--right" href={line.nextRoute} aria-label="Naechste Folgeseite">
-              <BtxCellLine columns={20} text={line.nextLabel ?? ""} />
+              {line.nextLabel ?? ""}
             </a>
           ) : (
-            <span class="btx-page-nav-empty">
-              <BtxCellLine columns={20} text="" />
-            </span>
+            <span class="btx-page-nav-empty">&nbsp;</span>
           )}
         </div>
       );
     }
 
-    return (
-      <div class={`btx-line btx-line--${line.tone ?? "default"}`}>
-        <BtxCellLine text={line.text} />
-      </div>
-    );
+    return <div class={`btx-line btx-line--${line.tone ?? "default"}`}>{line.text || "\u00a0"}</div>;
   })
 }
