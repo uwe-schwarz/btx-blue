@@ -57,7 +57,66 @@ body {
 .btx-screen-shell {
   width: 100%;
   display: grid;
-  place-items: center;
+  grid-template-columns: minmax(10rem, 14rem) auto;
+  justify-content: center;
+  align-items: start;
+  gap: 1.5rem;
+}
+
+.btx-settings-panel {
+  width: min(100%, 14rem);
+}
+
+.btx-settings {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.btx-settings-group {
+  margin: 0;
+  padding: 0.8rem 0.9rem 1rem;
+  border: 0.2rem solid #1634b9;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 16%),
+    rgba(6, 16, 68, 0.92);
+  box-shadow:
+    0 0 0 0.25rem rgba(10, 18, 68, 0.72),
+    0 1rem 2.5rem rgba(0, 8, 40, 0.42);
+}
+
+.btx-settings-title {
+  padding: 0 0.45rem;
+  color: var(--btx-accent);
+  letter-spacing: 0.05em;
+}
+
+.btx-baud-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 0.75rem;
+  align-items: center;
+  padding: 0.45rem 0.35rem;
+  color: var(--btx-text);
+  cursor: pointer;
+}
+
+.btx-baud-option + .btx-baud-option {
+  border-top: 1px solid rgba(133, 164, 255, 0.2);
+}
+
+.btx-baud-option:hover,
+.btx-baud-option:focus-within {
+  background: rgba(137, 255, 255, 0.08);
+}
+
+.btx-baud-option__input {
+  margin: 0;
+  accent-color: var(--btx-link);
+}
+
+.btx-baud-option__label {
+  min-width: 0;
+  color: var(--btx-link);
 }
 
 .btx-screen {
@@ -106,6 +165,31 @@ body {
   letter-spacing: 0;
   font-kerning: none;
   font-variant-ligatures: none;
+}
+
+.btx-grid--revealing {
+  overflow: hidden;
+}
+
+.btx-grid--revealing::before,
+.btx-grid--revealing::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  background: var(--btx-bg);
+  pointer-events: none;
+}
+
+.btx-grid--revealing::before {
+  left: 0;
+  top: calc((var(--btx-reveal-row, 0) + 1) * var(--btx-row-height));
+  bottom: 0;
+}
+
+.btx-grid--revealing::after {
+  left: calc(var(--btx-reveal-col, 0) * 1ch);
+  top: calc(var(--btx-reveal-row, 0) * var(--btx-row-height));
+  height: var(--btx-row-height);
 }
 
 .btx-line,
@@ -293,6 +377,31 @@ body {
 
   .shell {
     padding: 1rem 0.5rem;
+  }
+
+  .btx-screen-shell {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .btx-settings-panel {
+    width: 100%;
+    max-width: calc(100vw - 1rem);
+  }
+
+  .btx-settings-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+  }
+
+  .btx-settings-title {
+    grid-column: 1 / -1;
+    margin-bottom: 0.2rem;
+  }
+
+  .btx-baud-option + .btx-baud-option {
+    border-top: 0;
   }
 
   .btx-screen {

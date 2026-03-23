@@ -10,6 +10,17 @@ test("direkte Hauptseiten funktionieren", async ({ page }) => {
   }
 });
 
+test("baud-rate setting defaults to 1200 and persists", async ({ page }) => {
+  await page.goto("/000");
+  await expect(page.locator("[data-btx-baud-option][value='1200']")).toBeChecked();
+
+  await page.locator("[data-btx-baud-option][value='LINE']").check();
+  await expect(page.locator("[data-btx-baud-option][value='LINE']")).toBeChecked();
+
+  await page.goto("/100");
+  await expect(page.locator("[data-btx-baud-option][value='LINE']")).toBeChecked();
+});
+
 test("numerische Navigation funktioniert", async ({ page }) => {
   await page.goto("/000");
   await page.keyboard.press("2");

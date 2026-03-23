@@ -9,11 +9,32 @@ interface Props {
 }
 
 const { page, searchIndex = [] } = Astro.props;
+const speedOptions = ["LINE", 300, 1200, 2400, 9600] as const;
 ---
 
 <section class="btx-screen-shell" aria-label="BTX Bildschirmtext Seite">
+  <aside class="btx-settings-panel" aria-label="BTX Einstellungen">
+    <form class="btx-settings" data-btx-baud-form>
+      <fieldset class="btx-settings-group">
+        <legend class="btx-settings-title">BAUD</legend>
+        {speedOptions.map((option) => (
+          <label class="btx-baud-option">
+            <input
+              class="btx-baud-option__input"
+              type="radio"
+              name="btx-baud"
+              value={option}
+              checked={option === 1200}
+              data-btx-baud-option
+            />
+            <span class="btx-baud-option__label">{option}</span>
+          </label>
+        ))}
+      </fieldset>
+    </form>
+  </aside>
   <div class="btx-screen">
-    <div class="btx-grid">
+    <div class="btx-grid" data-btx-grid>
       {page.headerLines.map((line, index) => (
         <div class={`btx-line ${index === 1 ? "btx-line--dim" : "btx-line--accent"}`}>{line}</div>
       ))}

@@ -1,5 +1,105 @@
 import type { SearchEntry } from "@/lib/btx/types";
 
+const BAUD_OPTIONS = ["LINE", 300, 1200, 2400, 9600] as const;
+const DEFAULT_BAUD = 1200;
+const BAUD_STORAGE_KEY = "btx-baud";
+const BTX_COLUMNS = 40;
+const BTX_ROWS = 24;
+const BTX_TOTAL_CELLS = BTX_COLUMNS * BTX_ROWS;
+
+type BtxBaud = (typeof BAUD_OPTIONS)[number];
+
+function isBtxBaud(value: string | number): value is BtxBaud {
+  return BAUD_OPTIONS.includes(value as BtxBaud);
+}
+
+function parseBaud(value: string | null): BtxBaud {
+  const parsed = value === "LINE" ? value : Number(value);
+  return isBtxBaud(parsed) ? parsed : DEFAULT_BAUD;
+}
+
+function readBaudPreference(): BtxBaud {
+  try {
+    return parseBaud(window.localStorage.getItem(BAUD_STORAGE_KEY));
+  } catch {
+    return DEFAULT_BAUD;
+  }
+}
+
+function writeBaudPreference(baud: BtxBaud) {
+  try {
+    window.localStorage.setItem(BAUD_STORAGE_KEY, String(baud));
+  } catch {
+    // Ignore storage failures and keep the in-memory selection.
+  }
+}
+
+class BtxRevealController {
+  private animationFrame = 0;
+
+  constructor(private readonly grid: HTMLElement) {}
+
+  animate(baud: BtxBaud) {
+    this.stop();
+
+    if (baud === "LINE" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      this.revealAll();
+      return;
+    }
+
+    const charsPerSecond = baud / 10;
+    const durationMs = (BTX_TOTAL_CELLS / charsPerSecond) * 1000;
+    const startTime = performance.now();
+
+    this.grid.classList.add("btx-grid--revealing");
+    this.setRevealPosition(0);
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const revealedCells = Math.min(BTX_TOTAL_CELLS, Math.floor((elapsed / 1000) * charsPerSecond));
+
+      this.setRevealPosition(revealedCells);
+
+      if (revealedCells >= BTX_TOTAL_CELLS) {
+        this.revealAll();
+        return;
+      }
+
+      if (elapsed >= durationMs) {
+        this.revealAll();
+        return;
+      }
+
+      this.animationFrame = window.requestAnimationFrame(tick);
+    };
+
+    this.animationFrame = window.requestAnimationFrame(tick);
+  }
+
+  private setRevealPosition(revealedCells: number) {
+    const clamped = Math.max(0, Math.min(BTX_TOTAL_CELLS, revealedCells));
+    const row = Math.min(BTX_ROWS, Math.floor(clamped / BTX_COLUMNS));
+    const col = clamped % BTX_COLUMNS;
+
+    this.grid.style.setProperty("--btx-reveal-row", String(row));
+    this.grid.style.setProperty("--btx-reveal-col", String(col));
+  }
+
+  private revealAll() {
+    this.stop();
+    this.grid.classList.remove("btx-grid--revealing");
+    this.grid.style.removeProperty("--btx-reveal-row");
+    this.grid.style.removeProperty("--btx-reveal-col");
+  }
+
+  private stop() {
+    if (this.animationFrame) {
+      window.cancelAnimationFrame(this.animationFrame);
+      this.animationFrame = 0;
+    }
+  }
+}
+
 function shorten(value: string, length: number): string {
   if (value.length <= length) {
     return value;
@@ -246,7 +346,43 @@ function initSearch() {
   render();
 }
 
+function initBaudControl() {
+  const grid = document.querySelector<HTMLElement>("[data-btx-grid]");
+  const baudForm = document.querySelector<HTMLFormElement>("[data-btx-baud-form]");
+  const baudInputs = [...document.querySelectorAll<HTMLInputElement>("[data-btx-baud-option]")];
+
+  if (!grid) {
+    return;
+  }
+
+  const revealController = new BtxRevealController(grid);
+  const initialBaud = readBaudPreference();
+
+  baudInputs.forEach((input) => {
+    input.checked = parseBaud(input.value) === initialBaud;
+  });
+
+  revealController.animate(initialBaud);
+
+  if (!baudForm) {
+    return;
+  }
+
+  baudForm.addEventListener("change", (event) => {
+    const target = event.target;
+
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const baud = parseBaud(target.value);
+    writeBaudPreference(baud);
+    revealController.animate(baud);
+  });
+}
+
 export function initBtxScreen() {
+  initBaudControl();
   initNavInput();
   initSearch();
 }
