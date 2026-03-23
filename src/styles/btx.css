@@ -62,6 +62,7 @@ body {
 
 .btx-screen {
   position: relative;
+  transform: scaleX(1.33);
   font-size: var(--btx-font-size);
   width: calc(var(--btx-line-width) + 4rem);
   max-width: calc(100vw - 2rem);
