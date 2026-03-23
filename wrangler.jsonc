@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "btx-blue",
+  "compatibility_date": "2026-03-23",
+  // Keep traffic on the custom domain. Flip this to true if you also want a workers.dev URL.
+  "workers_dev": false,
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    {
+      "pattern": "btx.blue",
+      "custom_domain": true
+    }
+  ]
+}

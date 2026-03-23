@@ -1,5 +1,15 @@
 # BTX Blue
 
+## Cloudflare Deployment
+
+This project is configured for Cloudflare Workers Static Assets via [`wrangler.jsonc`](./wrangler.jsonc).
+
+1. Authenticate once with `pnpm wrangler login` or provide `CLOUDFLARE_API_TOKEN`.
+2. Build and deploy with `pnpm deploy`.
+3. Preview the built site with Cloudflare's local runtime via `pnpm cf:dev`.
+
+The Wrangler config attaches the deployment to the custom domain `btx.blue`. The domain must be in the same Cloudflare account, and any conflicting DNS record for `btx.blue` should be removed before the first deploy so Wrangler can create the custom-domain binding.
+
 ## Asset Generation
 
 The favicon variants and the Open Graph image are derived from [`public/fav.png`](./public/fav.png).

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "cf:dev": "pnpm build && wrangler dev",
     "build": "astro build",
+    "deploy": "pnpm build && wrangler deploy",
     "preview": "astro preview",
     "check": "astro check",
     "test": "vitest run",
@@ -22,6 +24,7 @@
     "@types/node": "^25.5.0",
     "typescript": "^5.9.2",
     "vite": "^8.0.1",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "wrangler": "4.76.0"
   }
 }
