@@ -24,10 +24,10 @@ const { currentPage } = Astro.props;
     />
   </form>
   <div class="btx-status-links">
-    <a class="btx-status-link" href="/000">HOME</a>
-    <a class="btx-status-link" href="/800">SUCHE</a>
-    <button class="btx-status-link btx-status-link--button" type="button" data-btx-back-button aria-label="Zurueck">
-      ZUR
+    <a class="btx-status-link" href="/000" aria-label="Home" data-btx-command="home">#H</a>
+    <a class="btx-status-link" href="/800" aria-label="Suche" data-btx-command="search">*S</a>
+    <button class="btx-status-link btx-status-link--button" type="button" data-btx-back-button aria-label="Zurueck" data-btx-command="back">
+      *Z
     </button>
   </div>
 </div>

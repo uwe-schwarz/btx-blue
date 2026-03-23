@@ -14,7 +14,7 @@
   --btx-cols: 40;
   --btx-font-size: clamp(14px, 1.7vw, 28px);
   --btx-line-width: 40ch;
-  --btx-row-height: 1.08em;
+  --btx-row-height: 1.18em;
   --btx-bg: #03177d;
   --btx-frame: #0c1760;
   --btx-outer: #020612;
@@ -102,7 +102,7 @@ body {
   width: var(--btx-line-width);
   height: calc(24 * var(--btx-row-height));
   font-size: 1em;
-  line-height: 1.08;
+  line-height: 1.18;
   letter-spacing: 0;
   font-kerning: none;
   font-variant-ligatures: none;
@@ -200,7 +200,7 @@ body {
 
 .btx-status-line {
   display: grid;
-  grid-template-columns: 9ch 11ch 1fr;
+  grid-template-columns: max-content max-content 1fr;
   align-items: center;
   gap: 1ch;
   color: var(--btx-accent);
@@ -222,7 +222,7 @@ body {
 }
 
 .btx-nav-input {
-  width: 3ch;
+  width: 4ch;
 }
 
 .btx-status-link {
@@ -239,7 +239,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 2ch;
+  gap: 1ch;
   min-width: 0;
 }
 

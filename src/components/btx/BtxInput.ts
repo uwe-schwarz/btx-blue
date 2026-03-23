@@ -58,12 +58,33 @@ function initNavInput() {
   const backButton = document.querySelector<HTMLButtonElement>("[data-btx-back-button]");
   const prevPageLink = document.querySelector<HTMLAnchorElement>(".btx-page-nav-link--left");
   const nextPageLink = document.querySelector<HTMLAnchorElement>(".btx-page-nav-link--right");
+  let commandPrefix: "#" | "*" | null = null;
+  let commandResetTimer = 0;
 
   if (!navInput || !navForm) {
     return;
   }
 
   navInput.value = "";
+
+  const resetCommandPrefix = () => {
+    commandPrefix = null;
+    if (commandResetTimer) {
+      window.clearTimeout(commandResetTimer);
+      commandResetTimer = 0;
+    }
+  };
+
+  const armCommandPrefix = (prefix: "#" | "*") => {
+    commandPrefix = prefix;
+    if (commandResetTimer) {
+      window.clearTimeout(commandResetTimer);
+    }
+    commandResetTimer = window.setTimeout(() => {
+      commandPrefix = null;
+      commandResetTimer = 0;
+    }, 1200);
+  };
 
   const navigateToPage = () => {
     const value = navInput.value.replace(/\D/g, "");
@@ -87,9 +108,43 @@ function initNavInput() {
   document.addEventListener("keydown", (event) => {
     const active = document.activeElement;
     const searchInput = active instanceof HTMLElement && active.dataset.btxSearchInput !== undefined;
+    const navActive = active === navInput;
 
     if (searchInput) {
       return;
+    }
+
+    if (!navActive && (event.key === "#" || event.key === "*")) {
+      event.preventDefault();
+      armCommandPrefix(event.key as "#" | "*");
+      return;
+    }
+
+    if (!navActive && commandPrefix) {
+      const command = event.key.toUpperCase();
+
+      if (commandPrefix === "#" && command === "H") {
+        event.preventDefault();
+        resetCommandPrefix();
+        window.location.assign("/000");
+        return;
+      }
+
+      if (commandPrefix === "*" && command === "S") {
+        event.preventDefault();
+        resetCommandPrefix();
+        window.location.assign("/800");
+        return;
+      }
+
+      if (commandPrefix === "*" && command === "Z") {
+        event.preventDefault();
+        resetCommandPrefix();
+        window.history.back();
+        return;
+      }
+
+      resetCommandPrefix();
     }
 
     if (event.key === "Home") {
@@ -100,6 +155,7 @@ function initNavInput() {
 
     if (event.key === "Escape") {
       navInput.value = "";
+      resetCommandPrefix();
       return;
     }
 
@@ -115,21 +171,21 @@ function initNavInput() {
       return;
     }
 
-    if (event.key === "Backspace" && active !== navInput) {
+    if (event.key === "Backspace" && !navActive) {
       event.preventDefault();
       navInput.value = navInput.value.slice(0, -1);
       navInput.focus();
       return;
     }
 
-    if (/^\d$/.test(event.key) && active !== navInput) {
+    if (/^\d$/.test(event.key) && !navActive) {
       event.preventDefault();
       navInput.focus();
       navInput.value = `${navInput.value}${event.key}`.slice(0, 3);
       return;
     }
 
-    if (event.key === "Enter" && active !== navInput) {
+    if (event.key === "Enter" && !navActive) {
       if (navInput.value.length === 3) {
         event.preventDefault();
         navigateToPage();
