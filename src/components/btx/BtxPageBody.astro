@@ -22,7 +22,9 @@ const { bodyLines } = Astro.props;
     if (line.kind === "search") {
       return (
         <label class="btx-line btx-line--search" for="btx-search-input">
-          <span class="btx-search-label">{line.text}</span>
+          <span class="btx-search-label" data-btx-noise-text={line.text}>
+            {line.text}
+          </span>
           <input
             id="btx-search-input"
             class="btx-search-input"
@@ -44,6 +46,7 @@ const { bodyLines } = Astro.props;
           class="btx-line btx-line--link btx-line--success btx-search-result"
           href="/800"
           data-btx-search-result={line.slot}
+          data-btx-noise-text={line.slot === 0 ? "STICHWORT EINGEBEN" : "\u00a0"}
           aria-label={`Suchtreffer ${line.slot + 1}`}
         >
           STICHWORT EINGEBEN
@@ -56,14 +59,14 @@ const { bodyLines } = Astro.props;
         <div class="btx-line btx-line--page-nav">
           {line.prevRoute ? (
             <a class="btx-page-nav-link btx-page-nav-link--left" href={line.prevRoute} aria-label="Vorherige Folgeseite">
-              {line.prevLabel ?? ""}
+              <span data-btx-noise-text={line.prevLabel ?? ""}>{line.prevLabel ?? ""}</span>
             </a>
           ) : (
             <span class="btx-page-nav-empty">&nbsp;</span>
           )}
           {line.nextRoute ? (
             <a class="btx-page-nav-link btx-page-nav-link--right" href={line.nextRoute} aria-label="Naechste Folgeseite">
-              {line.nextLabel ?? ""}
+              <span data-btx-noise-text={line.nextLabel ?? ""}>{line.nextLabel ?? ""}</span>
             </a>
           ) : (
             <span class="btx-page-nav-empty">&nbsp;</span>
@@ -72,6 +75,10 @@ const { bodyLines } = Astro.props;
       );
     }
 
-    return <div class={`btx-line btx-line--${line.tone ?? "default"}`}>{line.text || "\u00a0"}</div>;
+    return (
+      <div class={`btx-line btx-line--${line.tone ?? "default"}`} data-btx-noise-text={line.text || "\u00a0"}>
+        {line.text || "\u00a0"}
+      </div>
+    );
   })
 }

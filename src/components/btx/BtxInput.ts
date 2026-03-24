@@ -1,8 +1,13 @@
 import type { SearchEntry } from "@/lib/btx/types";
+import { applyBitFlipNoise } from "@/lib/btx/bitflip";
 
 const BAUD_OPTIONS = ["LINE", 300, 1200, 2400, 9600] as const;
 const DEFAULT_BAUD = 1200;
 const BAUD_STORAGE_KEY = "btx-baud";
+const BIT_FLIP_ENABLED_STORAGE_KEY = "btx-bit-flip-enabled";
+const BIT_FLIP_NOISE_STORAGE_KEY = "btx-bit-flip-noise";
+const MAX_BIT_FLIP_NOISE = 10;
+const DEFAULT_BIT_FLIP_NOISE = 2;
 const BTX_COLUMNS = 40;
 const BTX_ROWS = 24;
 const BTX_TOTAL_CELLS = BTX_COLUMNS * BTX_ROWS;
@@ -29,6 +34,56 @@ function readBaudPreference(): BtxBaud {
 function writeBaudPreference(baud: BtxBaud) {
   try {
     window.localStorage.setItem(BAUD_STORAGE_KEY, String(baud));
+  } catch {
+    // Ignore storage failures and keep the in-memory selection.
+  }
+}
+
+function parseNoiseLevel(value: string | null): number {
+  if (value === null || value.trim() === "") {
+    return DEFAULT_BIT_FLIP_NOISE;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_BIT_FLIP_NOISE;
+  }
+
+  return Math.min(MAX_BIT_FLIP_NOISE, Math.max(0, Math.round(parsed * 10) / 10));
+}
+
+function formatNoiseLevel(level: number): string {
+  return `${parseNoiseLevel(String(level)).toFixed(1)}%`;
+}
+
+function readBitFlipEnabledPreference(): boolean {
+  try {
+    return window.localStorage.getItem(BIT_FLIP_ENABLED_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function writeBitFlipEnabledPreference(enabled: boolean) {
+  try {
+    window.localStorage.setItem(BIT_FLIP_ENABLED_STORAGE_KEY, String(enabled));
+  } catch {
+    // Ignore storage failures and keep the in-memory selection.
+  }
+}
+
+function readBitFlipNoisePreference(): number {
+  try {
+    return parseNoiseLevel(window.localStorage.getItem(BIT_FLIP_NOISE_STORAGE_KEY));
+  } catch {
+    return DEFAULT_BIT_FLIP_NOISE;
+  }
+}
+
+function writeBitFlipNoisePreference(level: number) {
+  try {
+    window.localStorage.setItem(BIT_FLIP_NOISE_STORAGE_KEY, String(parseNoiseLevel(String(level))));
   } catch {
     // Ignore storage failures and keep the in-memory selection.
   }
@@ -97,6 +152,41 @@ class BtxRevealController {
       window.cancelAnimationFrame(this.animationFrame);
       this.animationFrame = 0;
     }
+  }
+}
+
+class BtxNoiseController {
+  private enabled = false;
+  private noiseLevel = DEFAULT_BIT_FLIP_NOISE;
+
+  constructor(private readonly root: ParentNode) {}
+
+  update(enabled: boolean, noiseLevel: number) {
+    this.enabled = enabled;
+    this.noiseLevel = parseNoiseLevel(String(noiseLevel));
+    this.refresh();
+  }
+
+  setSource(node: HTMLElement, text: string) {
+    node.dataset.btxNoiseText = text;
+    node.textContent = this.render(text);
+  }
+
+  refresh() {
+    const noiseTargets = [...this.root.querySelectorAll<HTMLElement>("[data-btx-noise-text]")];
+
+    noiseTargets.forEach((target) => {
+      const source = target.dataset.btxNoiseText ?? target.textContent ?? "";
+      target.textContent = this.render(source);
+    });
+  }
+
+  private render(text: string): string {
+    if (!this.enabled) {
+      return text;
+    }
+
+    return applyBitFlipNoise(text, this.noiseLevel / 100);
   }
 }
 
@@ -294,7 +384,7 @@ function initNavInput() {
   });
 }
 
-function initSearch() {
+function initSearch(noiseController: BtxNoiseController) {
   const searchInput = document.querySelector<HTMLInputElement>("[data-btx-search-input]");
   const resultNodes = [...document.querySelectorAll<HTMLAnchorElement>("[data-btx-search-result]")];
   const indexNode = document.getElementById("btx-search-index");
@@ -313,19 +403,21 @@ function initSearch() {
       const result = results[index];
 
       if (!query) {
-        node.textContent = index === 0 ? "STICHWORT EINGEBEN" : "\u00a0";
+        noiseController.setSource(node, index === 0 ? "STICHWORT EINGEBEN" : "\u00a0");
         node.href = "/800";
+        node.setAttribute("aria-label", index === 0 ? "Stichwort eingeben" : `Suchtreffer ${index + 1}`);
         return;
       }
 
       if (!result) {
-        node.textContent = index === 0 ? "KEIN TREFFER" : "\u00a0";
+        noiseController.setSource(node, index === 0 ? "KEIN TREFFER" : "\u00a0");
         node.href = "/800";
+        node.setAttribute("aria-label", index === 0 ? "Kein Treffer" : `Suchtreffer ${index + 1}`);
         return;
       }
 
       const routeLabel = result.subpage ? `${result.page}/${result.subpage}` : result.page;
-      node.textContent = shorten(`${routeLabel} ${result.title.toUpperCase()}`, 40);
+      noiseController.setSource(node, shorten(`${routeLabel} ${result.title.toUpperCase()}`, 40));
       node.href = result.route;
       node.setAttribute("aria-label", `${routeLabel} ${result.title}`);
     });
@@ -371,7 +463,7 @@ function initBaudControl() {
   baudForm.addEventListener("change", (event) => {
     const target = event.target;
 
-    if (!(target instanceof HTMLInputElement)) {
+    if (!(target instanceof HTMLInputElement) || target.dataset.btxBaudOption === undefined) {
       return;
     }
 
@@ -381,8 +473,48 @@ function initBaudControl() {
   });
 }
 
+function initBitFlipControl(): BtxNoiseController | null {
+  const grid = document.querySelector<HTMLElement>("[data-btx-grid]");
+  const enabledInput = document.querySelector<HTMLInputElement>("[data-btx-noise-enabled]");
+  const levelInput = document.querySelector<HTMLInputElement>("[data-btx-noise-level]");
+  const valueNode = document.querySelector<HTMLElement>("[data-btx-noise-value]");
+
+  if (!grid || !enabledInput || !levelInput || !valueNode) {
+    return null;
+  }
+
+  const noiseController = new BtxNoiseController(grid);
+  const syncUi = () => {
+    const enabled = enabledInput.checked;
+    const level = parseNoiseLevel(levelInput.value);
+
+    levelInput.disabled = !enabled;
+    valueNode.textContent = formatNoiseLevel(level);
+    writeBitFlipEnabledPreference(enabled);
+    writeBitFlipNoisePreference(level);
+    noiseController.update(enabled, level);
+  };
+
+  enabledInput.checked = readBitFlipEnabledPreference();
+  levelInput.value = String(readBitFlipNoisePreference());
+
+  enabledInput.addEventListener("change", syncUi);
+  levelInput.addEventListener("input", syncUi);
+
+  syncUi();
+  return noiseController;
+}
+
 export function initBtxScreen() {
+  const noiseController = initBitFlipControl();
   initBaudControl();
   initNavInput();
-  initSearch();
+
+  if (noiseController) {
+    initSearch(noiseController);
+    noiseController.refresh();
+    return;
+  }
+
+  initSearch(new BtxNoiseController(document));
 }
