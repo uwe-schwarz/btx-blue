@@ -57,6 +57,7 @@ body {
 
 .btx-screen-shell {
   --btx-screen-frame-width: min(calc(var(--btx-line-width) + 4rem), calc(100vw - 2rem));
+
   width: 100%;
   display: grid;
   grid-template-columns: minmax(8.5rem, 11rem) auto;

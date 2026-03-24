@@ -40,6 +40,10 @@ function writeBaudPreference(baud: BtxBaud) {
 }
 
 function parseNoiseLevel(value: string | null): number {
+  if (value === null || value.trim() === "") {
+    return DEFAULT_BIT_FLIP_NOISE;
+  }
+
   const parsed = Number(value);
 
   if (!Number.isFinite(parsed)) {
@@ -401,12 +405,14 @@ function initSearch(noiseController: BtxNoiseController) {
       if (!query) {
         noiseController.setSource(node, index === 0 ? "STICHWORT EINGEBEN" : "\u00a0");
         node.href = "/800";
+        node.setAttribute("aria-label", index === 0 ? "Stichwort eingeben" : `Suchtreffer ${index + 1}`);
         return;
       }
 
       if (!result) {
         noiseController.setSource(node, index === 0 ? "KEIN TREFFER" : "\u00a0");
         node.href = "/800";
+        node.setAttribute("aria-label", index === 0 ? "Kein Treffer" : `Suchtreffer ${index + 1}`);
         return;
       }
 
