@@ -7,10 +7,10 @@ const { currentPage } = Astro.props;
 ---
 
 <div class="btx-status-line">
-  <span class="btx-status-page">SEITE {currentPage}</span>
+  <span class="btx-status-page" data-btx-noise-text={`SEITE ${currentPage}`}>SEITE {currentPage}</span>
   <form class="btx-nav-form" data-btx-nav-form>
     <label class="sr-only" for="btx-nav-input">Seite eingeben</label>
-    <span class="btx-status-prompt">EINGABE</span>
+    <span class="btx-status-prompt" data-btx-noise-text="EINGABE">EINGABE</span>
     <input
       id="btx-nav-input"
       class="btx-nav-input"
@@ -24,9 +24,16 @@ const { currentPage } = Astro.props;
     />
   </form>
   <div class="btx-status-links">
-    <a class="btx-status-link" href="/000" aria-label="Home" data-btx-command="home">#H</a>
-    <a class="btx-status-link" href="/800" aria-label="Suche" data-btx-command="search">*S</a>
-    <button class="btx-status-link btx-status-link--button" type="button" data-btx-back-button aria-label="Zurueck" data-btx-command="back">
+    <a class="btx-status-link" href="/000" aria-label="Home" data-btx-command="home" data-btx-noise-text="#H">#H</a>
+    <a class="btx-status-link" href="/800" aria-label="Suche" data-btx-command="search" data-btx-noise-text="*S">*S</a>
+    <button
+      class="btx-status-link btx-status-link--button"
+      type="button"
+      data-btx-back-button
+      aria-label="Zurueck"
+      data-btx-command="back"
+      data-btx-noise-text="*Z"
+    >
       *Z
     </button>
   </div>

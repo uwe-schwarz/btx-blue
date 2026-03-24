@@ -15,7 +15,7 @@ const speedOptions = ["LINE", 300, 1200, 2400, 9600] as const;
 <section class="btx-screen-shell" aria-label="BTX Bildschirmtext Seite">
   <aside class="btx-settings-panel" aria-label="BTX Einstellungen">
     <form class="btx-settings" data-btx-baud-form>
-      <fieldset class="btx-settings-group">
+      <fieldset class="btx-settings-group btx-settings-group--baud">
         <legend class="btx-settings-title">BAUD</legend>
         {speedOptions.map((option) => (
           <label class="btx-baud-option">
@@ -31,12 +31,39 @@ const speedOptions = ["LINE", 300, 1200, 2400, 9600] as const;
           </label>
         ))}
       </fieldset>
+      <fieldset class="btx-settings-group">
+        <legend class="btx-settings-title">BIT FLIP</legend>
+        <label class="btx-toggle-option" for="btx-noise-enabled">
+          <span class="btx-toggle-option__copy">
+            <span class="btx-toggle-option__label">AKTIV</span>
+          </span>
+          <input id="btx-noise-enabled" class="btx-toggle-option__input" type="checkbox" role="switch" data-btx-noise-enabled />
+        </label>
+        <label class="btx-slider-control" for="btx-noise-level">
+          <span class="btx-slider-control__copy">
+            <span class="btx-slider-control__label">NOISE</span>
+            <span class="btx-slider-control__value" data-btx-noise-value>2.0%</span>
+          </span>
+          <input
+            id="btx-noise-level"
+            class="btx-slider-control__input"
+            type="range"
+            min="0"
+            max="10"
+            step="0.1"
+            value="2"
+            data-btx-noise-level
+          />
+        </label>
+      </fieldset>
     </form>
   </aside>
   <div class="btx-screen">
     <div class="btx-grid" data-btx-grid>
       {page.headerLines.map((line, index) => (
-        <div class={`btx-line ${index === 1 ? "btx-line--dim" : "btx-line--accent"}`}>{line}</div>
+        <div class={`btx-line ${index === 1 ? "btx-line--dim" : "btx-line--accent"}`} data-btx-noise-text={line}>
+          {line}
+        </div>
       ))}
       <BtxPageBody bodyLines={page.bodyLines} />
       <BtxStatusBar currentPage={page.subpage > 1 ? `${page.id}/${page.subpage}` : page.id} />
