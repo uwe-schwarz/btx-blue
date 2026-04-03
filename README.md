@@ -31,3 +31,22 @@ magick -size 1200x630 gradient:'#020612-#03177d' \
 
 rm public/fav-t.png
 ```
+
+## Visual Regression
+
+This repo includes a local before/after screenshot workflow modeled after the `astro-degit-de` dependency-upgrade setup.
+
+- `pnpm run deps:visual:install-browser` installs Chromium for Playwright if needed.
+- `pnpm run deps:visual:preview` serves the built site on `http://127.0.0.1:4321`.
+- `pnpm run deps:visual -- capture --base-url http://127.0.0.1:4321 --output-dir /tmp/btx-before`
+- `pnpm run deps:visual -- compare --before-dir /tmp/btx-before --after-dir /tmp/btx-after --output-dir /tmp/btx-report`
+
+The capture set is deterministic and intentionally small:
+
+- `/000`
+- `/105`
+- `/340`
+- `/800` with the Seitenfinder prefilled with `ipv6`
+- `/998/2`
+
+The script forces BTX rendering into a stable state by setting BAUD to `LINE`, turning bit-flip noise off, disabling CSS animation/transition noise, and capturing the `.btx-screen-shell` region rather than a full-page browser screenshot.

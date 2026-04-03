@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "upgrade-dependencies-pr": {
+      "source": "uwe-schwarz/skills",
+      "sourceType": "github",
+      "computedHash": "4428b8b43290ed5e7bc91181d0a8e1b9db9c0b418e998be6a9e4813e4f9b6d11"
+    }
+  }
+}
