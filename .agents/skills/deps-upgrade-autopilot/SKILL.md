@@ -48,14 +48,15 @@ Use this repo-local skill when the user wants the full dependency-upgrade flow e
 ## Execution Order
 
 1. Inventory the repo exactly as the base skill requires.
-2. Create a fresh branch before editing. Prefer `codex/deps-btx-blue-<yyyymmdd>`.
-3. Capture the pre-upgrade screenshots into the temp dir.
-4. Upgrade dependencies with `pnpm` and regenerate the lockfile.
-5. Run the base skill’s release-note triage and apply required fallout fixes.
-6. Run `pnpm check`, `pnpm test`, and `pnpm build`.
-7. Capture post-upgrade screenshots and run the compare step.
-8. Stage only the dependency upgrade work and directly related fixes.
-9. Commit, push, and open a ready PR unless there is a clear reason to keep it draft.
+2. Check for actual available updates before creating a branch or capturing screenshots. Use `pnpm outdated --format json` and stop the task immediately if every tracked package is already at its latest published version.
+3. Create a fresh branch before editing. Prefer `codex/deps-btx-blue-<yyyymmdd>`.
+4. Capture the pre-upgrade screenshots into the temp dir.
+5. Upgrade dependencies with `pnpm` and regenerate the lockfile.
+6. Run the base skill’s release-note triage and apply required fallout fixes.
+7. Run `pnpm check`, `pnpm test`, and `pnpm build`.
+8. Capture post-upgrade screenshots and run the compare step.
+9. Stage only the dependency upgrade work and directly related fixes.
+10. Commit, push, and open a ready PR unless there is a clear reason to keep it draft.
 
 ## PR Body
 
@@ -100,6 +101,7 @@ Use this repo-local skill when the user wants the full dependency-upgrade flow e
 ## Stop Conditions
 
 - Stop and report if:
+  - `pnpm outdated --format json` shows no available dependency updates
   - GitHub auth or push access is missing
   - the worktree contains unrelated risky user changes
   - the visual compare shows a material UI change you cannot justify
