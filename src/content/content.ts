@@ -314,7 +314,7 @@ export const siteContent: SiteContent = {
       sentTitle: { de: "Nachricht gesendet!", en: "Message sent!" },
       validation: {
         email: {
-          de: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+          de: "Bitte gib eine gültige E-Mail-Adresse ein.",
           en: "Please enter a valid email address.",
         },
         message: {
@@ -346,7 +346,7 @@ export const siteContent: SiteContent = {
       xing: "https://www.xing.com/profile/Uwe_Schwarz72",
     },
     subtitle: {
-      de: "Interesse an einer Zusammenarbeit? Kontaktieren Sie mich gerne!",
+      de: "Interesse an einer Zusammenarbeit? Kontaktiere mich gerne!",
       en: "Interested in working together? Feel free to reach out!",
     },
     title: {
