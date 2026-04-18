@@ -15,10 +15,10 @@ const AGENT_RESPONSE_VARY = "Accept, User-Agent";
 const ANSI_MEDIA_TYPES = ["text/x-ansi", "text/ansi"] as const;
 const ANSI = {
   reset: "\u001B[0m",
-  screen: "\u001B[44;97m",
-  header: "\u001B[44;93;1m",
+  screen: "\u001B[48;5;24;97m",
+  header: "\u001B[48;5;24;93;1m",
   status: "\u001B[43;30;1m",
-  title: "\u001B[46;30;1m",
+  title: "\u001B[48;5;31;30;1m",
   help: "\u001B[36;1m",
   hint: "\u001B[2;37m",
 };
