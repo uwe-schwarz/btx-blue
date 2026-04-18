@@ -208,14 +208,16 @@ export function estimateMarkdownTokens(markdown: string): number {
 }
 
 interface AcceptPreference {
+  index: number;
   q: number;
   specificity: number;
 }
 
 function parseAcceptPreference(acceptHeader: string, mediaType: string): AcceptPreference | null {
   let best: AcceptPreference | null = null;
+  const [mediaTypePrefix] = mediaType.split("/");
 
-  for (const rawEntry of acceptHeader.split(",")) {
+  for (const [index, rawEntry] of acceptHeader.split(",").entries()) {
     const [rawType, ...rawParams] = rawEntry.split(";");
     const type = rawType.trim().toLowerCase();
 
@@ -227,7 +229,7 @@ function parseAcceptPreference(acceptHeader: string, mediaType: string): AcceptP
 
     if (type === mediaType) {
       specificity = 2;
-    } else if (type === `${mediaType.split("/")[0]}/*`) {
+    } else if (type === `${mediaTypePrefix}/*`) {
       specificity = 1;
     } else if (type === "*/*") {
       specificity = 0;
@@ -253,8 +255,12 @@ function parseAcceptPreference(acceptHeader: string, mediaType: string): AcceptP
       }
     }
 
-    if (!best || q > best.q || (q === best.q && specificity > best.specificity)) {
-      best = { q, specificity };
+    if (
+      !best ||
+      specificity > best.specificity ||
+      (specificity === best.specificity && index < best.index)
+    ) {
+      best = { index, q, specificity };
     }
   }
 
@@ -286,7 +292,11 @@ export function acceptsMarkdown(acceptHeader: string | null): boolean {
     return false;
   }
 
-  return markdown.specificity > html.specificity;
+  if (markdown.specificity !== html.specificity) {
+    return markdown.specificity > html.specificity;
+  }
+
+  return false;
 }
 
 export function buildMarkdownResponse(pathname: string): Response {

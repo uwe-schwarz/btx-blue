@@ -7,14 +7,13 @@ function agentMarkdownDevPlugin() {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         try {
-          const accept = req.headers.accept;
-
-          if (!accept?.includes("text/markdown")) {
-            return next();
-          }
-
           const requestUrl = new URL(req.url ?? "/", "http://127.0.0.1");
           const agentReady = await server.ssrLoadModule("/src/lib/agent-ready.ts");
+          const accept = req.headers.accept ?? null;
+
+          if (!agentReady.acceptsMarkdown(accept)) {
+            return next();
+          }
 
           if (!agentReady.isKnownBtxPath(requestUrl.pathname)) {
             return next();

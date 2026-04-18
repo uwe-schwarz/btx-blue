@@ -62,5 +62,7 @@ describe("agent-ready artifacts", () => {
     expect(acceptsMarkdown("text/markdown;q=0.5, text/html;q=0.5")).toBe(false);
     expect(acceptsMarkdown("text/markdown;q=0.5, */*;q=0.9")).toBe(false);
     expect(acceptsMarkdown("text/markdown;q=0, text/html;q=1")).toBe(false);
+    expect(acceptsMarkdown("text/html;q=0, */*;q=1")).toBe(false);
+    expect(acceptsMarkdown("text/html;q=0, text/markdown;q=1, */*;q=0.1")).toBe(true);
   });
 });

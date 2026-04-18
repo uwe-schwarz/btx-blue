@@ -49,4 +49,20 @@ describe("astro middleware agent surfaces", () => {
 
     expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
   });
+
+  it("keeps html in tie cases where markdown is not clearly preferred", async () => {
+    const response = await handleAstroAgentRequest(
+      {
+        request: new Request("https://btx.blue/", {
+          headers: {
+            accept: "text/markdown;q=0.1, text/html;q=1",
+          },
+        }),
+        url: new URL("https://btx.blue/"),
+      } as never,
+      vi.fn(async () => new Response("<html><body>BTX</body></html>", { headers: { "content-type": "text/html; charset=utf-8" } })),
+    );
+
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+  });
 });
