@@ -16,6 +16,10 @@ function makeEnv(html = "<html><body>BTX</body></html>") {
   };
 }
 
+function makeResponse(body: string, init?: ResponseInit) {
+  return new Response(body, init);
+}
+
 describe("worker agent surfaces", () => {
   it("returns markdown when agents request text/markdown", async () => {
     const env = makeEnv();
@@ -50,6 +54,24 @@ describe("worker agent surfaces", () => {
     expect(env.ASSETS.fetch).toHaveBeenCalledOnce();
   });
 
+  it("preserves existing Link headers on homepage html responses", async () => {
+    const env = makeEnv();
+    env.ASSETS.fetch = vi.fn(async () =>
+      makeResponse("<html><body>BTX</body></html>", {
+        status: 200,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          Link: '</upstream>; rel="preload"',
+        },
+      }),
+    );
+
+    const response = await handleRequest(new Request("https://btx.blue/"), env);
+
+    expect(response.headers.get("link")).toContain('</upstream>; rel="preload"');
+    expect(response.headers.get("link")).toContain('</001>; rel="help"');
+  });
+
   it("returns a markdown 404 page for unknown routes", async () => {
     const env = makeEnv("not found");
     env.ASSETS.fetch = vi.fn(async () =>
@@ -75,6 +97,31 @@ describe("worker agent surfaces", () => {
     await expect(response.text()).resolves.toContain("SEITE NICHT VORHANDEN");
   });
 
+  it("does not replace non-404 upstream html with generated markdown", async () => {
+    const env = makeEnv();
+    env.ASSETS.fetch = vi.fn(async () =>
+      makeResponse("<html><body>custom html</body></html>", {
+        status: 200,
+        headers: {
+          "content-type": "Text/HTML; charset=utf-8",
+        },
+      }),
+    );
+
+    const response = await handleRequest(
+      new Request("https://btx.blue/custom-page", {
+        headers: {
+          accept: "text/markdown",
+        },
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("Text/HTML; charset=utf-8");
+    await expect(response.text()).resolves.toContain("custom html");
+  });
+
   it("keeps html as the default for wildcard accept headers", async () => {
     const env = makeEnv();
     const response = await handleRequest(
@@ -88,6 +135,23 @@ describe("worker agent surfaces", () => {
 
     expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
     expect(env.ASSETS.fetch).toHaveBeenCalledOnce();
+  });
+
+  it("adds Vary: Accept to unknown html fallback responses", async () => {
+    const env = makeEnv();
+    env.ASSETS.fetch = vi.fn(async () =>
+      makeResponse("<html><body>missing</body></html>", {
+        status: 404,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+        },
+      }),
+    );
+
+    const response = await handleRequest(new Request("https://btx.blue/missing"), env);
+
+    expect(response.headers.get("vary")).toContain("Accept");
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
   });
 
   it("returns markdown only when markdown wins by q value", async () => {

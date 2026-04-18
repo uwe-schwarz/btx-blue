@@ -1,7 +1,6 @@
 import {
   acceptsMarkdown,
   buildMarkdownResponse,
-  isHomepagePath,
   isKnownBtxPath,
   withAgentDiscoveryHeaders,
 } from "./lib/agent-ready";
@@ -22,14 +21,14 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   }
 
   const response = await env.ASSETS.fetch(request);
-  const contentType = response.headers.get("content-type") ?? "";
+  const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
   const isHtml = contentType.includes("text/html");
 
-  if (acceptsMarkdown(request.headers.get("accept")) && isHtml) {
+  if (acceptsMarkdown(request.headers.get("accept")) && isHtml && response.status === 404) {
     return buildMarkdownResponse(pathname);
   }
 
-  if (isHtml && (isKnownBtxPath(pathname) || isHomepagePath(pathname))) {
+  if (isHtml) {
     return withAgentDiscoveryHeaders(response, pathname);
   }
 

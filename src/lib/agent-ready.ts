@@ -38,7 +38,23 @@ function resolvePageFromPathname(pathname: string): BtxRenderedPage | undefined 
   }
 
   const page = match.groups.page as `${number}${number}${number}`;
-  const subpage = match.groups.subpage ? Number(match.groups.subpage) : 1;
+  const rawSubpage = match.groups.subpage;
+
+  if (rawSubpage) {
+    if (!/^[1-9]\d*$/.test(rawSubpage)) {
+      return undefined;
+    }
+
+    const parsedSubpage = Number(rawSubpage);
+
+    if (parsedSubpage <= 1) {
+      return undefined;
+    }
+
+    return getRenderedPage({ page, subpage: parsedSubpage });
+  }
+
+  const subpage = 1;
   return getRenderedPage({ page, subpage });
 }
 
@@ -258,7 +274,8 @@ function parseAcceptPreference(acceptHeader: string, mediaType: string): AcceptP
     if (
       !best ||
       specificity > best.specificity ||
-      (specificity === best.specificity && index < best.index)
+      (specificity === best.specificity && q > best.q) ||
+      (specificity === best.specificity && q === best.q && index < best.index)
     ) {
       best = { index, q, specificity };
     }
@@ -323,7 +340,8 @@ export function withAgentDiscoveryHeaders(response: Response, pathname: string):
   }
 
   if (isHomepagePath(pathname)) {
-    headers.set("Link", getHomepageLinkHeaderValue());
+    const existingLink = headers.get("Link");
+    headers.set("Link", existingLink ? `${existingLink}, ${getHomepageLinkHeaderValue()}` : getHomepageLinkHeaderValue());
   }
 
   return new Response(response.body, {

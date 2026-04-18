@@ -1,7 +1,6 @@
 import {
   acceptsMarkdown,
   buildMarkdownResponse,
-  isHomepagePath,
   isKnownBtxPath,
   withAgentDiscoveryHeaders,
 } from "@/lib/agent-ready";
@@ -20,14 +19,14 @@ export async function handleAstroAgentRequest(context: AstroLikeContext, next: (
   }
 
   const response = await next();
-  const contentType = response.headers.get("content-type") ?? "";
+  const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
   const isHtml = contentType.includes("text/html");
 
-  if (wantsMarkdown && isHtml) {
+  if (wantsMarkdown && isHtml && response.status === 404) {
     return buildMarkdownResponse(pathname);
   }
 
-  if (isHtml && (isKnownBtxPath(pathname) || isHomepagePath(pathname))) {
+  if (isHtml) {
     return withAgentDiscoveryHeaders(response, pathname);
   }
 

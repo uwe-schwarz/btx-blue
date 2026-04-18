@@ -4,6 +4,8 @@ import {
   buildRobotsTxt,
   buildSitemapXml,
   getCanonicalPageUrls,
+  getMarkdownStatus,
+  isKnownBtxPath,
   renderMarkdownDocument,
 } from "@/lib/agent-ready";
 
@@ -52,6 +54,13 @@ describe("agent-ready artifacts", () => {
     expect(markdown).toContain("`/800`");
   });
 
+  it("rejects explicit subpage-one aliases as known BTX pages", () => {
+    expect(isKnownBtxPath("/100/1")).toBe(false);
+    expect(isKnownBtxPath("/000/01")).toBe(false);
+    expect(getMarkdownStatus("/100/1")).toBe(404);
+    expect(renderMarkdownDocument("/100/1")).toContain("SEITE NICHT VORHANDEN");
+  });
+
   it("only prefers markdown when it is explicitly and clearly preferred", () => {
     expect(acceptsMarkdown("text/markdown")).toBe(true);
     expect(acceptsMarkdown("text/markdown;q=0.9, text/html;q=0.1")).toBe(true);
@@ -64,5 +73,8 @@ describe("agent-ready artifacts", () => {
     expect(acceptsMarkdown("text/markdown;q=0, text/html;q=1")).toBe(false);
     expect(acceptsMarkdown("text/html;q=0, */*;q=1")).toBe(false);
     expect(acceptsMarkdown("text/html;q=0, text/markdown;q=1, */*;q=0.1")).toBe(true);
+    expect(acceptsMarkdown("text/html;q=0.1, text/html;q=1, text/markdown;q=0.9")).toBe(false);
+    expect(acceptsMarkdown("text/markdown;q=0.1, text/markdown;q=1, text/html;q=0.9")).toBe(true);
+    expect(acceptsMarkdown("text/html;q=0.1, */*;q=0.2, text/html;q=1, text/markdown;q=0.9")).toBe(false);
   });
 });

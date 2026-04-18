@@ -20,6 +20,42 @@ describe("astro middleware agent surfaces", () => {
     await expect(response.text()).resolves.toContain("# BTX Blue 000");
   });
 
+  it("returns markdown for unknown upstream html 404 responses", async () => {
+    const response = await handleAstroAgentRequest(
+      {
+        request: new Request("https://btx.blue/sdfasdfsad-whatever", {
+          headers: {
+            accept: "text/markdown",
+          },
+        }),
+        url: new URL("https://btx.blue/sdfasdfsad-whatever"),
+      } as never,
+      vi.fn(async () => new Response("<html><body>missing</body></html>", { status: 404, headers: { "content-type": "text/html; charset=utf-8" } })),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
+    await expect(response.text()).resolves.toContain("SEITE NICHT VORHANDEN");
+  });
+
+  it("does not replace non-404 upstream html with generated markdown", async () => {
+    const response = await handleAstroAgentRequest(
+      {
+        request: new Request("https://btx.blue/custom-page", {
+          headers: {
+            accept: "text/markdown",
+          },
+        }),
+        url: new URL("https://btx.blue/custom-page"),
+      } as never,
+      vi.fn(async () => new Response("<html><body>custom html</body></html>", { status: 200, headers: { "content-type": "Text/HTML; charset=utf-8" } })),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("Text/HTML; charset=utf-8");
+    await expect(response.text()).resolves.toContain("custom html");
+  });
+
   it("adds homepage discovery headers to html responses", async () => {
     const response = await handleAstroAgentRequest(
       {
@@ -32,6 +68,26 @@ describe("astro middleware agent surfaces", () => {
     expect(response.headers.get("vary")).toContain("Accept");
     expect(response.headers.get("link")).toContain('</001>; rel="help"');
     expect(response.headers.get("link")).toContain('type="text/markdown"');
+  });
+
+  it("preserves existing Link headers when adding homepage discovery links", async () => {
+    const response = await handleAstroAgentRequest(
+      {
+        request: new Request("https://btx.blue/"),
+        url: new URL("https://btx.blue/"),
+      } as never,
+      vi.fn(async () =>
+        new Response("<html><body>BTX</body></html>", {
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            Link: '</upstream>; rel="preload"',
+          },
+        }),
+      ),
+    );
+
+    expect(response.headers.get("link")).toContain('</upstream>; rel="preload"');
+    expect(response.headers.get("link")).toContain('</001>; rel="help"');
   });
 
   it("keeps html for non-explicit text wildcards", async () => {
