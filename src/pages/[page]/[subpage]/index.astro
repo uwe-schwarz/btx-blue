@@ -24,6 +24,6 @@ if (!page) {
 }
 ---
 
-<BtxLayout title={`BTX Blue ${page.id}/${page.subpage}`} description={`${page.title} Folgeseite ${page.subpage}`}>
+<BtxLayout title={`BTX Blue ${page.id}/${page.subpage}`} description={`${page.title} Folgeseite ${page.subpage}`} canonicalPath={page.route}>
   <BtxScreen page={page} searchIndex={page.id === "800" ? searchIndex : []} />
 </BtxLayout>
