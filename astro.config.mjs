@@ -13,11 +13,12 @@ function agentMarkdownDevPlugin() {
           const userAgent = req.headers["user-agent"] ?? null;
           const preferredFormat = agentReady.canServeAgentFormatForMethod(req.method) ? agentReady.getPreferredAgentFormat(accept, userAgent) : "html";
 
-          if (preferredFormat === "html") {
-            return next();
-          }
+          const originalWrite = res.write.bind(res);
+          const originalEnd = res.end.bind(res);
+          const originalWriteHead = res.writeHead.bind(res);
+          const chunks = [];
 
-          if (agentReady.isKnownBtxPath(requestUrl.pathname)) {
+          if (preferredFormat !== "html" && agentReady.isKnownBtxPath(requestUrl.pathname)) {
             const response =
               preferredFormat === "ansi" ? agentReady.buildAnsiResponse(requestUrl.pathname) : agentReady.buildMarkdownResponse(requestUrl.pathname);
             res.statusCode = response.status;
@@ -29,11 +30,6 @@ function agentMarkdownDevPlugin() {
             res.end(await response.text());
             return;
           }
-
-          const originalWrite = res.write.bind(res);
-          const originalEnd = res.end.bind(res);
-          const originalWriteHead = res.writeHead.bind(res);
-          const chunks = [];
 
           res.writeHead = function interceptedWriteHead(statusCode, statusMessageOrHeaders, maybeHeaders) {
             this.statusCode = statusCode;
@@ -76,7 +72,7 @@ function agentMarkdownDevPlugin() {
 
             const contentType = String(this.getHeader("content-type") ?? "").toLowerCase();
             const isHtml = contentType.includes("text/html");
-            const wantsAgent404 = this.statusCode === 404 && isHtml;
+            const wantsAgent404 = preferredFormat !== "html" && this.statusCode === 404 && isHtml;
 
             res.write = originalWrite;
             res.end = originalEnd;
@@ -100,8 +96,49 @@ function agentMarkdownDevPlugin() {
               return originalEnd(await response.text(), typeof encoding === "string" ? encoding : undefined, typeof callback === "function" ? callback : undefined);
             }
 
-            const body = chunks.length > 0 ? Buffer.concat(chunks) : undefined;
-            return originalEnd(body, typeof encoding === "string" ? encoding : undefined, typeof callback === "function" ? callback : undefined);
+            const body = chunks.length > 0 ? Buffer.concat(chunks) : Buffer.alloc(0);
+
+            if (!isHtml) {
+              return originalEnd(body, typeof encoding === "string" ? encoding : undefined, typeof callback === "function" ? callback : undefined);
+            }
+
+            const originalHeaders = new Headers();
+
+            for (const headerName of res.getHeaderNames()) {
+              const headerValue = res.getHeader(headerName);
+
+              if (Array.isArray(headerValue)) {
+                originalHeaders.set(headerName, headerValue.join(", "));
+              } else if (headerValue !== undefined) {
+                originalHeaders.set(headerName, String(headerValue));
+              }
+            }
+
+            const decoratedResponse = agentReady.withAgentDiscoveryHeaders(
+              new Response(body, {
+                status: this.statusCode,
+                statusText: this.statusMessage,
+                headers: originalHeaders,
+              }),
+              requestUrl.pathname,
+            );
+
+            for (const headerName of res.getHeaderNames()) {
+              res.removeHeader(headerName);
+            }
+
+            res.statusCode = decoratedResponse.status;
+            res.statusMessage = decoratedResponse.statusText || res.statusMessage;
+
+            decoratedResponse.headers.forEach((value, key) => {
+              res.setHeader(key, value);
+            });
+
+            return originalEnd(
+              Buffer.from(await decoratedResponse.arrayBuffer()),
+              typeof encoding === "string" ? encoding : undefined,
+              typeof callback === "function" ? callback : undefined,
+            );
           };
 
           next();
