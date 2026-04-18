@@ -3,13 +3,15 @@ import "@/styles/btx.css";
 import { SITE_URL } from "@/lib/site-config";
 
 interface Props {
+  canonicalPath?: string;
   description: string;
+  robotsContent?: string;
   title: string;
 }
 
-const { description, title } = Astro.props;
+const { canonicalPath, description, robotsContent = "index,follow", title } = Astro.props;
 const siteName = "BTX Blue";
-const canonicalUrl = new URL(Astro.url.pathname, SITE_URL);
+const canonicalUrl = new URL(canonicalPath ?? Astro.url.pathname, SITE_URL);
 const ogImageUrl = new URL("/og-image.png", SITE_URL);
 ---
 
@@ -20,7 +22,7 @@ const ogImageUrl = new URL("/og-image.png", SITE_URL);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="robots" content="index,follow" />
+    <meta name="robots" content={robotsContent} />
     <meta name="theme-color" content="#03177d" />
     <meta name="application-name" content={siteName} />
     <meta property="og:locale" content="de_DE" />
@@ -45,6 +47,7 @@ const ogImageUrl = new URL("/og-image.png", SITE_URL);
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
   </head>
   <body>
     <main class="shell">
