@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  acceptsMarkdown,
   buildRobotsTxt,
   buildSitemapXml,
   getCanonicalPageUrls,
   getMarkdownStatus,
+  getPreferredAgentFormat,
   isKnownBtxPath,
+  renderAnsiDocument,
   renderMarkdownDocument,
 } from "@/lib/agent-ready";
 
@@ -54,6 +55,16 @@ describe("agent-ready artifacts", () => {
     expect(markdown).toContain("`/800`");
   });
 
+  it("renders an ANSI-colored terminal page with BTX navigation help", () => {
+    const ansi = renderAnsiDocument("/");
+
+    expect(ansi).toContain("\u001B[");
+    expect(ansi).toContain("BTX.BLUE            UWE SCHWARZ 000");
+    expect(ansi).toContain("Weitere Seiten:");
+    expect(ansi).toContain("/820");
+    expect(ansi).toContain("/800");
+  });
+
   it("rejects explicit subpage-one aliases as known BTX pages", () => {
     expect(isKnownBtxPath("/100/1")).toBe(false);
     expect(isKnownBtxPath("/000/01")).toBe(false);
@@ -61,20 +72,28 @@ describe("agent-ready artifacts", () => {
     expect(renderMarkdownDocument("/100/1")).toContain("SEITE NICHT VORHANDEN");
   });
 
-  it("only prefers markdown when it is explicitly and clearly preferred", () => {
-    expect(acceptsMarkdown("text/markdown")).toBe(true);
-    expect(acceptsMarkdown("text/markdown;q=0.9, text/html;q=0.1")).toBe(true);
-    expect(acceptsMarkdown("text/markdown;q=0.9, text/*;q=0.8, */*;q=0.1")).toBe(true);
+  it("prefers markdown or ansi only when clearly requested, otherwise keeps html default", () => {
+    expect(getPreferredAgentFormat("text/markdown", null)).toBe("markdown");
+    expect(getPreferredAgentFormat("text/markdown;q=0.9, text/html;q=0.1", null)).toBe("markdown");
+    expect(getPreferredAgentFormat("text/markdown;q=0.9, text/*;q=0.8, */*;q=0.1", null)).toBe("markdown");
 
-    expect(acceptsMarkdown("text/*")).toBe(false);
-    expect(acceptsMarkdown("*/*")).toBe(false);
-    expect(acceptsMarkdown("text/markdown;q=0.5, text/html;q=0.5")).toBe(false);
-    expect(acceptsMarkdown("text/markdown;q=0.5, */*;q=0.9")).toBe(false);
-    expect(acceptsMarkdown("text/markdown;q=0, text/html;q=1")).toBe(false);
-    expect(acceptsMarkdown("text/html;q=0, */*;q=1")).toBe(false);
-    expect(acceptsMarkdown("text/html;q=0, text/markdown;q=1, */*;q=0.1")).toBe(true);
-    expect(acceptsMarkdown("text/html;q=0.1, text/html;q=1, text/markdown;q=0.9")).toBe(false);
-    expect(acceptsMarkdown("text/markdown;q=0.1, text/markdown;q=1, text/html;q=0.9")).toBe(true);
-    expect(acceptsMarkdown("text/html;q=0.1, */*;q=0.2, text/html;q=1, text/markdown;q=0.9")).toBe(false);
+    expect(getPreferredAgentFormat("text/x-ansi", null)).toBe("ansi");
+    expect(getPreferredAgentFormat("text/ansi;q=0.9, text/html;q=0.1", null)).toBe("ansi");
+    expect(getPreferredAgentFormat("text/x-ansi;q=0.9, text/markdown;q=0.8, text/html;q=0.1", null)).toBe("ansi");
+    expect(getPreferredAgentFormat("text/markdown;q=0.9, text/x-ansi;q=0.8, text/html;q=0.1", null)).toBe("markdown");
+
+    expect(getPreferredAgentFormat("text/*", null)).toBe("html");
+    expect(getPreferredAgentFormat("*/*", null)).toBe("html");
+    expect(getPreferredAgentFormat("*/*", "curl/8.7.1")).toBe("ansi");
+    expect(getPreferredAgentFormat("text/*, */*;q=0.8", "curl/8.7.1")).toBe("html");
+    expect(getPreferredAgentFormat("text/markdown;q=0.5, text/html;q=0.5", null)).toBe("html");
+    expect(getPreferredAgentFormat("text/x-ansi;q=0.5, text/html;q=0.5", null)).toBe("html");
+    expect(getPreferredAgentFormat("text/markdown;q=0.5, */*;q=0.9", null)).toBe("html");
+    expect(getPreferredAgentFormat("text/markdown;q=0, text/html;q=1", null)).toBe("html");
+    expect(getPreferredAgentFormat("text/html;q=0, */*;q=1", null)).toBe("html");
+    expect(getPreferredAgentFormat("text/html;q=0, text/markdown;q=1, */*;q=0.1", null)).toBe("markdown");
+    expect(getPreferredAgentFormat("text/html;q=0.1, text/html;q=1, text/markdown;q=0.9", null)).toBe("html");
+    expect(getPreferredAgentFormat("text/markdown;q=0.1, text/markdown;q=1, text/html;q=0.9", null)).toBe("markdown");
+    expect(getPreferredAgentFormat("text/html;q=0.1, */*;q=0.2, text/html;q=1, text/markdown;q=0.9", null)).toBe("html");
   });
 });

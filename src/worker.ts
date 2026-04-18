@@ -1,6 +1,7 @@
 import {
-  acceptsMarkdown,
+  buildAnsiResponse,
   buildMarkdownResponse,
+  getPreferredAgentFormat,
   isKnownBtxPath,
   withAgentDiscoveryHeaders,
 } from "./lib/agent-ready";
@@ -15,17 +16,18 @@ interface Env {
 
 export async function handleRequest(request: Request, env: Env): Promise<Response> {
   const pathname = new URL(request.url).pathname;
+  const preferredFormat = getPreferredAgentFormat(request.headers.get("accept"), request.headers.get("user-agent"));
 
-  if (acceptsMarkdown(request.headers.get("accept")) && isKnownBtxPath(pathname)) {
-    return buildMarkdownResponse(pathname);
+  if (preferredFormat !== "html" && isKnownBtxPath(pathname)) {
+    return preferredFormat === "ansi" ? buildAnsiResponse(pathname) : buildMarkdownResponse(pathname);
   }
 
   const response = await env.ASSETS.fetch(request);
   const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
   const isHtml = contentType.includes("text/html");
 
-  if (acceptsMarkdown(request.headers.get("accept")) && isHtml && response.status === 404) {
-    return buildMarkdownResponse(pathname);
+  if (preferredFormat !== "html" && isHtml && response.status === 404) {
+    return preferredFormat === "ansi" ? buildAnsiResponse(pathname) : buildMarkdownResponse(pathname);
   }
 
   if (isHtml) {

@@ -40,6 +40,44 @@ describe("worker agent surfaces", () => {
     expect(env.ASSETS.fetch).not.toHaveBeenCalled();
   });
 
+  it("returns ansi when agents explicitly request ANSI", async () => {
+    const env = makeEnv();
+    const response = await handleRequest(
+      new Request("https://btx.blue/", {
+        headers: {
+          accept: "text/x-ansi",
+        },
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(response.headers.get("vary")).toContain("Accept");
+    expect(response.headers.get("vary")).toContain("User-Agent");
+    await expect(response.text()).resolves.toContain("\u001B[");
+    expect(env.ASSETS.fetch).not.toHaveBeenCalled();
+  });
+
+  it("returns ansi for curl wildcard requests as a terminal convenience mode", async () => {
+    const env = makeEnv();
+    const response = await handleRequest(
+      new Request("https://btx.blue/", {
+        headers: {
+          accept: "*/*",
+          "user-agent": "curl/8.7.1",
+        },
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(response.headers.get("vary")).toContain("User-Agent");
+    await expect(response.text()).resolves.toContain("\u001B[");
+    expect(env.ASSETS.fetch).not.toHaveBeenCalled();
+  });
+
   it("adds discovery Link headers to the homepage HTML response", async () => {
     const env = makeEnv();
     const response = await handleRequest(new Request("https://btx.blue/"), env);
@@ -95,6 +133,34 @@ describe("worker agent surfaces", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
     await expect(response.text()).resolves.toContain("SEITE NICHT VORHANDEN");
+  });
+
+  it("returns an ansi 404 page for curl wildcard requests on unknown routes", async () => {
+    const env = makeEnv("not found");
+    env.ASSETS.fetch = vi.fn(async () =>
+      new Response("not found", {
+        status: 404,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+        },
+      }),
+    );
+
+    const response = await handleRequest(
+      new Request("https://btx.blue/unbekannt", {
+        headers: {
+          accept: "*/*",
+          "user-agent": "curl/8.7.1",
+        },
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    const body = await response.text();
+    expect(body).toContain("SEITE NICHT VORHANDEN");
+    expect(body).toContain("\u001B[");
   });
 
   it("does not replace non-404 upstream html with generated markdown", async () => {

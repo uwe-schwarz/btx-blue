@@ -11,6 +11,19 @@ const HOMEPAGE_LINKS = [
   '</>; rel="alternate"; type="text/markdown"; title="BTX Markdown Ansicht"',
   '</sitemap.xml>; rel="describedby"; type="application/xml"; title="XML Sitemap"',
 ];
+const AGENT_RESPONSE_VARY = "Accept, User-Agent";
+const ANSI_MEDIA_TYPES = ["text/x-ansi", "text/ansi"] as const;
+const ANSI = {
+  reset: "\u001B[0m",
+  screen: "\u001B[44;97m",
+  header: "\u001B[44;93;1m",
+  status: "\u001B[43;30;1m",
+  title: "\u001B[46;30;1m",
+  help: "\u001B[36;1m",
+  hint: "\u001B[2;37m",
+};
+
+export type AgentFormat = "html" | "markdown" | "ansi";
 
 function normalizePathname(pathname: string): string {
   if (!pathname || pathname === "/") {
@@ -202,6 +215,39 @@ export function renderMarkdownDocument(pathname: string): string {
   ].join("\n");
 }
 
+function renderAnsiLine(line: string, style: string): string {
+  return `${style}${line}${ANSI.reset}`;
+}
+
+export function renderAnsiDocument(pathname: string): string {
+  const page = resolvePageFromPathname(pathname) ?? NOT_FOUND_PAGE;
+  const currentRoute = page.id === "000" && page.subpage === 1 ? "/" : toRoute(page.id, page.subpage);
+  const pageLabel = page.subpage > 1 ? `${page.id}/${page.subpage}` : page.id;
+  const screenLines = renderScreenLines(page);
+  const headerLineCount = page.headerLines.length;
+  const statusLineIndex = screenLines.length - 1;
+
+  const renderedScreen = screenLines.map((line, index) => {
+    if (index < headerLineCount) {
+      return renderAnsiLine(line, ANSI.header);
+    }
+
+    if (index === statusLineIndex) {
+      return renderAnsiLine(line, ANSI.status);
+    }
+
+    return renderAnsiLine(line, ANSI.screen);
+  });
+
+  return [
+    renderAnsiLine(` BTX BLUE ${pageLabel} `.padEnd(BTX_COLUMNS, " "), ANSI.title),
+    ...renderedScreen,
+    "",
+    `${ANSI.help}Weitere Seiten:${ANSI.reset} ${ANSI.screen}/820${ANSI.reset} Uebersicht  ${ANSI.screen}/800${ANSI.reset} Finder  ${ANSI.screen}/100${ANSI.reset} Einstieg`,
+    `${ANSI.hint}Aktuelle Ansicht: ${currentRoute}  |  Fuer Markdown: Accept: text/markdown  |  Fuer ANSI: Accept: text/x-ansi${ANSI.reset}`,
+  ].join("\n");
+}
+
 export function getHomepageLinkHeaderValue(): string {
   return HOMEPAGE_LINKS.join(", ");
 }
@@ -284,36 +330,107 @@ function parseAcceptPreference(acceptHeader: string, mediaType: string): AcceptP
   return best;
 }
 
-export function acceptsMarkdown(acceptHeader: string | null): boolean {
+function getBestAcceptPreference(acceptHeader: string | null, mediaTypes: readonly string[]): AcceptPreference | null {
+  if (!acceptHeader) {
+    return null;
+  }
+
+  let best: AcceptPreference | null = null;
+
+  for (const mediaType of mediaTypes) {
+    const candidate = parseAcceptPreference(acceptHeader, mediaType);
+
+    if (
+      candidate &&
+      (!best ||
+        candidate.specificity > best.specificity ||
+        (candidate.specificity === best.specificity && candidate.q > best.q) ||
+        (candidate.specificity === best.specificity && candidate.q === best.q && candidate.index < best.index))
+    ) {
+      best = candidate;
+    }
+  }
+
+  return best;
+}
+
+function isPositiveExactPreference(preference: AcceptPreference | null): preference is AcceptPreference {
+  return Boolean(preference && preference.specificity === 2 && preference.q > 0);
+}
+
+function isGenericCurlAccept(acceptHeader: string | null): boolean {
   if (!acceptHeader) {
     return false;
   }
 
-  const markdown = parseAcceptPreference(acceptHeader, "text/markdown");
+  let hasWildcard = false;
 
-  if (!markdown || markdown.q <= 0) {
+  for (const rawEntry of acceptHeader.split(",")) {
+    const [rawType, ...rawParams] = rawEntry.split(";");
+    const type = rawType.trim().toLowerCase();
+
+    if (!type) {
+      continue;
+    }
+
+    let q = 1;
+
+    for (const rawParam of rawParams) {
+      const [name, value] = rawParam.split("=");
+
+      if (name?.trim().toLowerCase() !== "q") {
+        continue;
+      }
+
+      const parsed = Number(value?.trim());
+
+      if (!Number.isNaN(parsed)) {
+        q = Math.min(1, Math.max(0, parsed));
+      }
+    }
+
+    if (q <= 0) {
+      continue;
+    }
+
+    if (type === "*/*") {
+      hasWildcard = true;
+      continue;
+    }
+
     return false;
   }
 
-  const html = parseAcceptPreference(acceptHeader, "text/html");
+  return hasWildcard;
+}
 
-  if (!html || html.q <= 0) {
-    return markdown.specificity === 2;
+function isCurlUserAgent(userAgent: string | null): boolean {
+  return /\bcurl\/[\d.]+/i.test(userAgent ?? "");
+}
+
+export function getPreferredAgentFormat(acceptHeader: string | null, userAgent: string | null): AgentFormat {
+  const markdown = getBestAcceptPreference(acceptHeader, ["text/markdown"]);
+  const ansi = getBestAcceptPreference(acceptHeader, ANSI_MEDIA_TYPES);
+  const html = getBestAcceptPreference(acceptHeader, ["text/html"]);
+  const htmlQ = html?.q ?? 0;
+
+  if (isPositiveExactPreference(markdown) && markdown.q > htmlQ && (!isPositiveExactPreference(ansi) || markdown.q >= ansi.q)) {
+    return "markdown";
   }
 
-  if (markdown.q > html.q) {
-    return true;
+  if (isPositiveExactPreference(ansi) && ansi.q > htmlQ && (!isPositiveExactPreference(markdown) || ansi.q > markdown.q)) {
+    return "ansi";
   }
 
-  if (markdown.q < html.q) {
-    return false;
+  if (isCurlUserAgent(userAgent) && isGenericCurlAccept(acceptHeader)) {
+    return "ansi";
   }
 
-  if (markdown.specificity !== html.specificity) {
-    return markdown.specificity > html.specificity;
-  }
+  return "html";
+}
 
-  return false;
+export function acceptsMarkdown(acceptHeader: string | null): boolean {
+  return getPreferredAgentFormat(acceptHeader, null) === "markdown";
 }
 
 export function buildMarkdownResponse(pathname: string): Response {
@@ -324,7 +441,17 @@ export function buildMarkdownResponse(pathname: string): Response {
     headers: {
       "content-type": "text/markdown; charset=utf-8",
       "x-markdown-tokens": String(estimateMarkdownTokens(markdown)),
-      vary: "Accept",
+      vary: AGENT_RESPONSE_VARY,
+    },
+  });
+}
+
+export function buildAnsiResponse(pathname: string): Response {
+  return new Response(renderAnsiDocument(pathname), {
+    status: getMarkdownStatus(pathname),
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      vary: AGENT_RESPONSE_VARY,
     },
   });
 }
@@ -334,9 +461,22 @@ export function withAgentDiscoveryHeaders(response: Response, pathname: string):
   const vary = headers.get("Vary");
 
   if (!vary) {
-    headers.set("Vary", "Accept");
-  } else if (!vary.toLowerCase().split(",").map((entry) => entry.trim()).includes("accept")) {
-    headers.set("Vary", `${vary}, Accept`);
+    headers.set("Vary", AGENT_RESPONSE_VARY);
+  } else {
+    const nextVary = vary
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+
+    if (!nextVary.some((entry) => entry.toLowerCase() === "accept")) {
+      nextVary.push("Accept");
+    }
+
+    if (!nextVary.some((entry) => entry.toLowerCase() === "user-agent")) {
+      nextVary.push("User-Agent");
+    }
+
+    headers.set("Vary", nextVary.join(", "));
   }
 
   if (isHomepagePath(pathname)) {
