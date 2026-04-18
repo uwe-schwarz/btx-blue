@@ -1,6 +1,7 @@
 import {
   buildAnsiResponse,
   buildMarkdownResponse,
+  canServeAgentFormatForMethod,
   getPreferredAgentFormat,
   isKnownBtxPath,
   withAgentDiscoveryHeaders,
@@ -16,7 +17,9 @@ interface Env {
 
 export async function handleRequest(request: Request, env: Env): Promise<Response> {
   const pathname = new URL(request.url).pathname;
-  const preferredFormat = getPreferredAgentFormat(request.headers.get("accept"), request.headers.get("user-agent"));
+  const preferredFormat = canServeAgentFormatForMethod(request.method)
+    ? getPreferredAgentFormat(request.headers.get("accept"), request.headers.get("user-agent"))
+    : "html";
 
   if (preferredFormat !== "html" && isKnownBtxPath(pathname)) {
     return preferredFormat === "ansi" ? buildAnsiResponse(pathname) : buildMarkdownResponse(pathname);

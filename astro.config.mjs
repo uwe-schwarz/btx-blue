@@ -11,7 +11,7 @@ function agentMarkdownDevPlugin() {
           const agentReady = await server.ssrLoadModule("/src/lib/agent-ready.ts");
           const accept = req.headers.accept ?? null;
           const userAgent = req.headers["user-agent"] ?? null;
-          const preferredFormat = agentReady.getPreferredAgentFormat(accept, userAgent);
+          const preferredFormat = agentReady.canServeAgentFormatForMethod(req.method) ? agentReady.getPreferredAgentFormat(accept, userAgent) : "html";
 
           if (preferredFormat === "html") {
             return next();

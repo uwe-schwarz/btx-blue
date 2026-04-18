@@ -1,6 +1,7 @@
 import {
   buildAnsiResponse,
   buildMarkdownResponse,
+  canServeAgentFormatForMethod,
   getPreferredAgentFormat,
   isKnownBtxPath,
   withAgentDiscoveryHeaders,
@@ -13,7 +14,9 @@ interface AstroLikeContext {
 
 export async function handleAstroAgentRequest(context: AstroLikeContext, next: () => Promise<Response>): Promise<Response> {
   const pathname = context.url.pathname;
-  const preferredFormat = getPreferredAgentFormat(context.request.headers.get("accept"), context.request.headers.get("user-agent"));
+  const preferredFormat = canServeAgentFormatForMethod(context.request.method)
+    ? getPreferredAgentFormat(context.request.headers.get("accept"), context.request.headers.get("user-agent"))
+    : "html";
 
   if (preferredFormat !== "html" && isKnownBtxPath(pathname)) {
     return preferredFormat === "ansi" ? buildAnsiResponse(pathname) : buildMarkdownResponse(pathname);

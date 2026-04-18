@@ -78,6 +78,23 @@ describe("worker agent surfaces", () => {
     expect(env.ASSETS.fetch).not.toHaveBeenCalled();
   });
 
+  it("does not shortcut POST requests for known BTX pages", async () => {
+    const env = makeEnv("<html><body>posted</body></html>");
+    const response = await handleRequest(
+      new Request("https://btx.blue/100", {
+        method: "POST",
+        headers: {
+          accept: "text/markdown",
+        },
+      }),
+      env,
+    );
+
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    await expect(response.text()).resolves.toContain("posted");
+    expect(env.ASSETS.fetch).toHaveBeenCalledOnce();
+  });
+
   it("adds discovery Link headers to the homepage HTML response", async () => {
     const env = makeEnv();
     const response = await handleRequest(new Request("https://btx.blue/"), env);
@@ -161,6 +178,32 @@ describe("worker agent surfaces", () => {
     const body = await response.text();
     expect(body).toContain("SEITE NICHT VORHANDEN");
     expect(body).toContain("\u001B[");
+  });
+
+  it("does not replace POST 404 responses with synthetic agent pages", async () => {
+    const env = makeEnv("method not allowed");
+    env.ASSETS.fetch = vi.fn(async () =>
+      new Response("method not allowed", {
+        status: 404,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+        },
+      }),
+    );
+
+    const response = await handleRequest(
+      new Request("https://btx.blue/unbekannt", {
+        method: "POST",
+        headers: {
+          accept: "text/x-ansi",
+        },
+      }),
+      env,
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    await expect(response.text()).resolves.toContain("method not allowed");
   });
 
   it("does not replace non-404 upstream html with generated markdown", async () => {

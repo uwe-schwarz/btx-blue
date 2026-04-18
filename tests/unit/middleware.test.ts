@@ -39,6 +39,24 @@ describe("astro middleware agent surfaces", () => {
     await expect(response.text()).resolves.toContain("\u001B[");
   });
 
+  it("does not shortcut POST requests for known BTX pages in astro runtime", async () => {
+    const response = await handleAstroAgentRequest(
+      {
+        request: new Request("https://btx.blue/100", {
+          method: "POST",
+          headers: {
+            accept: "text/markdown",
+          },
+        }),
+        url: new URL("https://btx.blue/100"),
+      } as never,
+      vi.fn(async () => new Response("<html><body>posted</body></html>", { headers: { "content-type": "text/html; charset=utf-8" } })),
+    );
+
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    await expect(response.text()).resolves.toContain("posted");
+  });
+
   it("returns markdown for unknown upstream html 404 responses", async () => {
     const response = await handleAstroAgentRequest(
       {
@@ -76,6 +94,25 @@ describe("astro middleware agent surfaces", () => {
     const body = await response.text();
     expect(body).toContain("\u001B[");
     expect(body).toContain("SEITE NICHT VORHANDEN");
+  });
+
+  it("does not replace POST 404 responses with synthetic agent pages", async () => {
+    const response = await handleAstroAgentRequest(
+      {
+        request: new Request("https://btx.blue/sdfasdfsad-whatever", {
+          method: "POST",
+          headers: {
+            accept: "text/x-ansi",
+          },
+        }),
+        url: new URL("https://btx.blue/sdfasdfsad-whatever"),
+      } as never,
+      vi.fn(async () => new Response("<html><body>method not allowed</body></html>", { status: 404, headers: { "content-type": "text/html; charset=utf-8" } })),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+    await expect(response.text()).resolves.toContain("method not allowed");
   });
 
   it("does not replace non-404 upstream html with generated markdown", async () => {

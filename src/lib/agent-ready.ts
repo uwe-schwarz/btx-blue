@@ -24,6 +24,7 @@ const ANSI = {
 };
 
 export type AgentFormat = "html" | "markdown" | "ansi";
+const AGENT_SAFE_METHODS = new Set(["GET", "HEAD"]);
 
 function normalizePathname(pathname: string): string {
   if (!pathname || pathname === "/") {
@@ -427,6 +428,10 @@ export function getPreferredAgentFormat(acceptHeader: string | null, userAgent: 
   }
 
   return "html";
+}
+
+export function canServeAgentFormatForMethod(method: string | null): boolean {
+  return AGENT_SAFE_METHODS.has((method ?? "GET").toUpperCase());
 }
 
 export function acceptsMarkdown(acceptHeader: string | null): boolean {
