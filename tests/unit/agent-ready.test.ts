@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SITE_URL } from "@/lib/site-config";
 import {
   buildRobotsTxt,
   buildSitemapXml,
@@ -32,8 +33,9 @@ describe("agent-ready artifacts", () => {
 
   it("builds robots.txt with sitemap, content signals, and explicit AI bot groups", () => {
     const robots = buildRobotsTxt();
+    const sitemapUrl = new URL("/sitemap.xml", SITE_URL).href;
 
-    expect(robots).toContain("Sitemap: https://btx.blue/sitemap.xml");
+    expect(robots).toContain(`Sitemap: ${sitemapUrl}`);
     expect(robots).toContain("Content-signal: search=yes, ai-train=yes, ai-input=yes");
     expect(robots).toContain("User-agent: GPTBot");
     expect(robots).toContain("User-agent: OAI-SearchBot");

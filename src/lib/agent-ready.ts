@@ -164,6 +164,8 @@ export function buildSitemapXml(): string {
 }
 
 export function buildRobotsTxt(): string {
+  const sitemapUrl = new URL("/sitemap.xml", SITE_URL).href;
+
   return [
     "# BTX Blue crawl policy",
     "User-agent: *",
@@ -191,7 +193,7 @@ export function buildRobotsTxt(): string {
     "User-agent: PerplexityBot",
     "Allow: /",
     "",
-    "Sitemap: https://btx.blue/sitemap.xml",
+    `Sitemap: ${sitemapUrl}`,
   ].join("\n");
 }
 

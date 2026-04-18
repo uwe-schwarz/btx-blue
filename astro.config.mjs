@@ -65,80 +65,88 @@ function agentMarkdownDevPlugin() {
             return true;
           };
 
-          res.end = async function interceptedEnd(chunk, encoding, callback) {
-            if (chunk) {
-              chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, typeof encoding === "string" ? encoding : undefined));
-            }
+          res.end = function interceptedEnd(chunk, encoding, callback) {
+            void (async () => {
+              if (chunk) {
+                chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, typeof encoding === "string" ? encoding : undefined));
+              }
 
-            const contentType = String(this.getHeader("content-type") ?? "").toLowerCase();
-            const isHtml = contentType.includes("text/html");
-            const wantsAgent404 = preferredFormat !== "html" && this.statusCode === 404 && isHtml;
+              const contentType = String(this.getHeader("content-type") ?? "").toLowerCase();
+              const isHtml = contentType.includes("text/html");
+              const wantsAgent404 = preferredFormat !== "html" && this.statusCode === 404 && isHtml;
 
-            res.write = originalWrite;
-            res.end = originalEnd;
-            res.writeHead = originalWriteHead;
+              res.write = originalWrite;
+              res.end = originalEnd;
+              res.writeHead = originalWriteHead;
 
-            if (wantsAgent404) {
-              const response =
-                preferredFormat === "ansi" ? agentReady.buildAnsiResponse(requestUrl.pathname) : agentReady.buildMarkdownResponse(requestUrl.pathname);
+              if (wantsAgent404) {
+                const response =
+                  preferredFormat === "ansi" ? agentReady.buildAnsiResponse(requestUrl.pathname) : agentReady.buildMarkdownResponse(requestUrl.pathname);
+
+                for (const headerName of res.getHeaderNames()) {
+                  res.removeHeader(headerName);
+                }
+
+                res.statusCode = response.status;
+                res.statusMessage = response.statusText || res.statusMessage;
+
+                response.headers.forEach((value, key) => {
+                  res.setHeader(key, value);
+                });
+
+                originalEnd(await response.text(), typeof encoding === "string" ? encoding : undefined, typeof callback === "function" ? callback : undefined);
+                return;
+              }
+
+              const body = chunks.length > 0 ? Buffer.concat(chunks) : Buffer.alloc(0);
+
+              if (!isHtml) {
+                originalEnd(body, typeof encoding === "string" ? encoding : undefined, typeof callback === "function" ? callback : undefined);
+                return;
+              }
+
+              const originalHeaders = new Headers();
+
+              for (const headerName of res.getHeaderNames()) {
+                const headerValue = res.getHeader(headerName);
+
+                if (Array.isArray(headerValue)) {
+                  originalHeaders.set(headerName, headerValue.join(", "));
+                } else if (headerValue !== undefined) {
+                  originalHeaders.set(headerName, String(headerValue));
+                }
+              }
+
+              const decoratedResponse = agentReady.withAgentDiscoveryHeaders(
+                new Response(body, {
+                  status: this.statusCode,
+                  statusText: this.statusMessage,
+                  headers: originalHeaders,
+                }),
+                requestUrl.pathname,
+              );
 
               for (const headerName of res.getHeaderNames()) {
                 res.removeHeader(headerName);
               }
 
-              res.statusCode = response.status;
-              res.statusMessage = response.statusText || res.statusMessage;
+              res.statusCode = decoratedResponse.status;
+              res.statusMessage = decoratedResponse.statusText || res.statusMessage;
 
-              response.headers.forEach((value, key) => {
+              decoratedResponse.headers.forEach((value, key) => {
                 res.setHeader(key, value);
               });
 
-              return originalEnd(await response.text(), typeof encoding === "string" ? encoding : undefined, typeof callback === "function" ? callback : undefined);
-            }
-
-            const body = chunks.length > 0 ? Buffer.concat(chunks) : Buffer.alloc(0);
-
-            if (!isHtml) {
-              return originalEnd(body, typeof encoding === "string" ? encoding : undefined, typeof callback === "function" ? callback : undefined);
-            }
-
-            const originalHeaders = new Headers();
-
-            for (const headerName of res.getHeaderNames()) {
-              const headerValue = res.getHeader(headerName);
-
-              if (Array.isArray(headerValue)) {
-                originalHeaders.set(headerName, headerValue.join(", "));
-              } else if (headerValue !== undefined) {
-                originalHeaders.set(headerName, String(headerValue));
-              }
-            }
-
-            const decoratedResponse = agentReady.withAgentDiscoveryHeaders(
-              new Response(body, {
-                status: this.statusCode,
-                statusText: this.statusMessage,
-                headers: originalHeaders,
-              }),
-              requestUrl.pathname,
-            );
-
-            for (const headerName of res.getHeaderNames()) {
-              res.removeHeader(headerName);
-            }
-
-            res.statusCode = decoratedResponse.status;
-            res.statusMessage = decoratedResponse.statusText || res.statusMessage;
-
-            decoratedResponse.headers.forEach((value, key) => {
-              res.setHeader(key, value);
+              originalEnd(
+                Buffer.from(await decoratedResponse.arrayBuffer()),
+                typeof encoding === "string" ? encoding : undefined,
+                typeof callback === "function" ? callback : undefined,
+              );
+            })().catch((error) => {
+              next(error);
             });
 
-            return originalEnd(
-              Buffer.from(await decoratedResponse.arrayBuffer()),
-              typeof encoding === "string" ? encoding : undefined,
-              typeof callback === "function" ? callback : undefined,
-            );
+            return this;
           };
 
           next();
