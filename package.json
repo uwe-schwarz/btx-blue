@@ -18,7 +18,7 @@
     "verify": "pnpm check && pnpm test && pnpm build"
   },
   "dependencies": {
-    "astro": "^6.1.8"
+    "astro": "^6.1.9"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.8",
