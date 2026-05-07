@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.0.4",
   "scripts": {
     "dev": "astro dev",
     "cf:dev": "pnpm build && wrangler dev",
@@ -18,7 +19,7 @@
     "verify": "pnpm check && pnpm test && pnpm build"
   },
   "dependencies": {
-    "astro": "^6.2.1"
+    "astro": "^6.2.2"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
@@ -30,6 +31,6 @@
     "typescript": "^6.0.3",
     "vite": "^8.0.10",
     "vitest": "^4.1.5",
-    "wrangler": "^4.87.0"
+    "wrangler": "^4.88.0"
   }
 }
