@@ -19,13 +19,13 @@
     "verify": "pnpm check && pnpm test && pnpm build"
   },
   "dependencies": {
-    "astro": "^6.3.3"
+    "astro": "^6.3.5"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "@playwright/test": "^1.60.0",
     "@techandsoftware/teletext-fonts": "^1.0.0",
-    "@types/node": "^25.8.0",
+    "@types/node": "^25.9.1",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
     "typescript": "^6.0.3",
