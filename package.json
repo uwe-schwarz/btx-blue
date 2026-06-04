@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.0.4",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "astro dev",
     "cf:dev": "pnpm build && wrangler dev",
@@ -19,7 +22,7 @@
     "verify": "pnpm check && pnpm test && pnpm build"
   },
   "dependencies": {
-    "astro": "^6.4.2"
+    "astro": "^6.4.3"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
@@ -29,8 +32,8 @@
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
     "typescript": "^6.0.3",
-    "vite": "^8.0.15",
-    "vitest": "^4.1.7",
-    "wrangler": "^4.95.0"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8",
+    "wrangler": "^4.97.0"
   }
 }
