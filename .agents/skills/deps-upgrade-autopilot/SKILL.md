@@ -68,6 +68,13 @@ Use this repo-local skill when the user wants the full dependency-upgrade flow e
   - any intentionally accepted tiny visual drift with a concrete explanation
   - any follow-up issues created from release-note review
 
+## Follow-Up Issue Deduplication
+
+- Before creating any follow-up issue, search all open issues for the same underlying package, target version, compatibility blocker, deferred migration, new rule, or other problem. Use `gh issue list --state open` plus targeted `gh issue search` queries as needed.
+- Compare issues by substance, not only by exact title or wording. Treat an issue as a match when it already tracks the same root cause and intended resolution, even if the title, package-version notation, symptoms, or proposed validation steps differ.
+- If a matching open issue exists, do not create another issue. Reuse the existing issue and link or refer to it in the dependency PR body and final automation summary.
+- Create a new issue only after the search shows that no open issue materially covers the problem. When the relationship is uncertain, prefer updating or referring to the broader existing issue rather than creating overlapping trackers.
+
 ## GitHub Babysitting
 
 - After the PR is created, use the [@github](plugin://github@openai-curated) plugin for PR metadata and comment inspection.
