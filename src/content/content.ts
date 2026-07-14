@@ -193,6 +193,21 @@ interface SitemapSection {
   title: LocalizedString;
 }
 
+export interface TrainingOffering {
+  date: LocalizedString;
+  description: LocalizedString;
+  duration: LocalizedString;
+  tags: Array<LocalizedString>;
+  title: LocalizedString;
+}
+
+interface TrainingsSection {
+  deliveredLabel: LocalizedString;
+  items: Array<TrainingOffering>;
+  subtitle: LocalizedString;
+  title: LocalizedString;
+}
+
 interface LLMSSection {
   keywords: LocalizedString;
   title: LocalizedString;
@@ -231,6 +246,7 @@ export interface SiteContent {
   };
   skills: Array<Skill>;
   skillsSection: SkillsSection;
+  trainings: TrainingsSection;
   translations: {
     languageSwitch: {
       de: string;
@@ -2177,6 +2193,60 @@ export const siteContent: SiteContent = {
     title: {
       de: "Fähigkeiten & Technologien",
       en: "Skills & Technologies",
+    },
+  },
+  trainings: {
+    deliveredLabel: {
+      de: "Durchgeführt",
+      en: "Delivered",
+    },
+    items: [
+      {
+        date: { de: "2.–3. Juni 2026", en: "June 2–3, 2026" },
+        description: {
+          de: "Von den Grundlagen moderner Lastverteilung bis zum produktionsreifen Setup: Architektur, Konfiguration, TLS-Terminierung, Health Checks, Hochverfügbarkeit und Observability – mit vielen Hands-on-Übungen entlang realer Szenarien.",
+          en: "From the fundamentals of modern load balancing to production-ready setups: architecture, configuration, TLS termination, health checks, high availability, and observability — with extensive hands-on labs built around real-world scenarios.",
+        },
+        duration: { de: "2-tägiges Training", en: "2-day training" },
+        tags: [
+          { de: "HAProxy", en: "HAProxy" },
+          { de: "Lastverteilung", en: "Load Balancing" },
+          { de: "TLS", en: "TLS" },
+          { de: "Hochverfügbarkeit", en: "High Availability" },
+          { de: "Observability", en: "Observability" },
+        ],
+        title: {
+          de: "HAProxy – Load Balancing in der Praxis",
+          en: "HAProxy — Load Balancing in Practice",
+        },
+      },
+      {
+        date: { de: "2.–3. Juli 2026", en: "July 2–3, 2026" },
+        description: {
+          de: "Wie aus Sprachmodellen verlässliche Automatisierung wird: Agenten-Architekturen, Tool-Nutzung, Orchestrierung mehrstufiger Workflows, Guardrails, Evaluierung und Sicherheit – inklusive Hands-on-Sessions mit aktuellen Frameworks.",
+          en: "How language models become reliable automation: agent architectures, tool use, orchestration of multi-step workflows, guardrails, evaluation, and security — including hands-on sessions with current frameworks.",
+        },
+        duration: { de: "2-tägiges Training", en: "2-day training" },
+        tags: [
+          { de: "Agentische KI", en: "Agentic AI" },
+          { de: "LLM-Orchestrierung", en: "LLM Orchestration" },
+          { de: "Tool-Nutzung", en: "Tool Use" },
+          { de: "Guardrails", en: "Guardrails" },
+          { de: "Automatisierung", en: "Automation" },
+        ],
+        title: {
+          de: "Agentic-AI-Workflows",
+          en: "Agentic AI Workflows",
+        },
+      },
+    ],
+    subtitle: {
+      de: "Trainings, die ich gehalten habe – praxisnah, direkt aus dem Projektalltag, mit Live-Demos und Hands-on-Übungen.",
+      en: "Trainings I have delivered — hands-on, built from real project work, with live demos and practical labs.",
+    },
+    title: {
+      de: "Trainings & Workshops",
+      en: "Trainings & Workshops",
     },
   },
   translations: {

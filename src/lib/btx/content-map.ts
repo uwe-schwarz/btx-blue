@@ -1,4 +1,4 @@
-import { siteContent, type Experience, type Skill } from "@/content/content";
+import { siteContent, type Experience, type Skill, type TrainingOffering } from "@/content/content";
 import type { BtxBodyLine, BtxLink, BtxPageDefinition, BtxPageId } from "@/lib/btx/types";
 import { compactList, de, linkTo, normalizeWhitespace, shorten, toRoute, toUpperBtx, unique } from "@/lib/btx/helpers";
 import { wrapText } from "@/lib/btx/wrap";
@@ -73,12 +73,22 @@ function makeExperienceLinks(): BtxLink[] {
   });
 }
 
+function makeTrainingLinks(): BtxLink[] {
+  return siteContent.trainings.items.map((training, index) =>
+    linkTo(trainingPageId(index), de(training.title)),
+  );
+}
+
 function projectPageId(index: number): BtxPageId {
   return String(210 + index).padStart(3, "0") as BtxPageId;
 }
 
 function experiencePageId(index: number): BtxPageId {
   return String(510 + index).padStart(3, "0") as BtxPageId;
+}
+
+function trainingPageId(index: number): BtxPageId {
+  return String(610 + index).padStart(3, "0") as BtxPageId;
 }
 
 function skillNames(skills: Skill[]): string[] {
@@ -140,6 +150,7 @@ function buildSystemPages(): BtxPageDefinition[] {
   const aboutParagraphs = siteContent.about.paragraphs.map((entry) => de(entry));
   const projectLinks = makeProjectLinks();
   const experienceLinks = makeExperienceLinks();
+  const trainingLinks = makeTrainingLinks();
   const stats = siteContent.about.stats.map((stat) => `${toUpperBtx(stat.key)} ${de(stat.value)}`);
   const socialLinks = Object.entries(siteContent.contact.socialLinks)
     .filter(([, value]) => Boolean(value))
@@ -172,6 +183,7 @@ function buildSystemPages(): BtxPageDefinition[] {
           linkTo("300", "Themen"),
           linkTo("400", "Kontakt"),
           linkTo("500", "Berufserfahrung"),
+          linkTo("600", "Trainings & Workshops"),
           linkTo("800", "Suche / Seitenfinder"),
         ]),
         blank(),
@@ -493,6 +505,19 @@ function buildSystemPages(): BtxPageDefinition[] {
       ],
     ),
     makePage(
+      "600",
+      de(siteContent.trainings.title),
+      ["Trainings", "Workshops", ...siteContent.trainings.items.map((training) => de(training.title))],
+      [
+        ...heading(de(siteContent.trainings.title)),
+        ...textLine(de(siteContent.trainings.subtitle)),
+        blank(),
+        ...linkLines(trainingLinks),
+        blank(),
+        ...linkLines([linkTo("000", "Startseite")]),
+      ],
+    ),
+    makePage(
       "800",
       "Suche / Seitenfinder",
       ["Suche", "Seitenfinder", "Verzeichnis", "Stichwort"],
@@ -603,6 +628,40 @@ function buildExperiencePages(): BtxPageDefinition[] {
   });
 }
 
+function buildTrainingPages(): BtxPageDefinition[] {
+  return siteContent.trainings.items.map((training: TrainingOffering, index) => {
+    const id = trainingPageId(index);
+    const nextTraining = siteContent.trainings.items[index + 1];
+    const links = [linkTo("600", "Trainings & Workshops")];
+
+    if (nextTraining) {
+      links.push(linkTo(trainingPageId(index + 1), de(nextTraining.title)));
+    }
+
+    return makePage(
+      id,
+      de(training.title),
+      ["Training", "Workshop", de(training.title), ...training.tags.map((tag) => de(tag))],
+      [
+        ...heading(de(training.title)),
+        ...textLine(
+          `${de(training.duration)} / ${de(siteContent.trainings.deliveredLabel)}: ${de(training.date)}`,
+          "dim",
+        ),
+        blank(),
+        ...splitSentences(de(training.description)).flatMap((part, sentenceIndex, parts) => [
+          ...textLine(part),
+          ...(sentenceIndex < parts.length - 1 ? [blank()] : []),
+        ]),
+        blank(),
+        ...tagLine(training.tags.map((tag) => de(tag))),
+        blank(),
+        ...linkLines(links),
+      ],
+    );
+  });
+}
+
 function buildPrivacyPage(): BtxPageDefinition {
   const lines: BtxBodyLine[] = [
     ...heading(de(siteContent.privacy.title)),
@@ -703,6 +762,7 @@ export function buildPageDefinitions(): BtxPageDefinition[] {
     ...buildSystemPages(),
     ...buildProjectPages(),
     ...buildExperiencePages(),
+    ...buildTrainingPages(),
     buildPrivacyPage(),
     buildImprintPage(),
   ];
