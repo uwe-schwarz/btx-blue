@@ -28,12 +28,12 @@
     "@astrojs/check": "^0.9.10",
     "@playwright/test": "^1.62.1",
     "@techandsoftware/teletext-fonts": "^1.0.0",
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.2.0",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
     "typescript": "^6.0.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10",
-    "wrangler": "^4.119.0"
+    "wrangler": "^4.120.0"
   }
 }
