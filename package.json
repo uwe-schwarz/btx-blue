@@ -22,7 +22,7 @@
     "verify": "pnpm check && pnpm test && pnpm build"
   },
   "dependencies": {
-    "astro": "^7.2.0"
+    "astro": "^7.2.1"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
@@ -34,6 +34,6 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10",
-    "wrangler": "^4.120.1"
+    "wrangler": "^4.121.0"
   }
 }
