@@ -4,7 +4,7 @@ description: Update a JavaScript, TypeScript, or Python project's dependencies t
 license: MIT
 metadata:
   author: uwe
-  version: "1.4.0"
+  version: "1.5.0"
 ---
 
 # Upgrade Dependencies PR
@@ -68,7 +68,11 @@ Use this skill to take a JavaScript, TypeScript, or Python repository from outda
 - Open a GitHub issue when an upgrade reveals a useful new feature worth adopting later, a migration that is too large for the dependency PR, or cleanup that would materially expand review scope.
 - Open a GitHub issue when an upgrade introduces a new rule, policy, or default that is relevant to this repo but would cause broad churn to adopt fully in the dependency PR.
 - Also open a GitHub issue when the latest version appears viable in code but is still blocked by upstream peer-range declarations or ecosystem support policy, and the dependency PR intentionally holds that package back.
-- Use `gh issue create`.
+- Before creating an issue for any blocker or deferred work, list the open issues and compare by underlying problem rather than exact title wording. The matching open issue is the single canonical issue for that problem.
+- Create exactly one issue only when no substantively matching open issue exists. If a matching issue is already open, do not create, edit, close, reopen, label, or comment on it as part of an ordinary re-check; only reuse its URL in the PR body or final summary when relevant.
+- A repeated test that confirms the same affected package/version, peer constraint, failure mode, hold, or workaround is not a substantial change. A new run date, another successful validation of the held-back version, an unrelated dependency upgrade, or a new dependency PR URL is also not a substantial change and must not produce an issue comment.
+- Comment on an existing issue only when the underlying tracked state changed materially, such as the blocker being resolved, the relevant upstream compatibility range changing, a new affected release changing the scope, the failure mode changing, or a viable new workaround becoming available. Before commenting, read enough of the existing issue state to confirm that the material fact is not already recorded.
+- Use `gh issue create` only after the open-issue check proves that no matching issue exists.
 - The issue body should name the package and version jump, explain why it matters to this repo, summarize the deferred work, call out any temporary suppression or scope limitation left in the PR, and link the official source material plus the upgrading PR when available.
 - Do not create issues for noise. File issues only when the package change is genuinely relevant to the project.
 
