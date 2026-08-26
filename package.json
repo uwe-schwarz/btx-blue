@@ -22,13 +22,13 @@
     "verify": "pnpm check && pnpm test && pnpm build"
   },
   "dependencies": {
-    "astro": "^7.2.4"
+    "astro": "^7.2.6"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@playwright/test": "^1.62.1",
     "@techandsoftware/teletext-fonts": "^1.0.0",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.3.0",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
     "typescript": "^6.0.3",
