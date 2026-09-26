@@ -159,6 +159,7 @@ function agentMarkdownDevPlugin() {
 }
 
 export default defineConfig({
+  devToolbar: { enabled: false },
   site: "https://btx.blue",
   output: "static",
   vite: {

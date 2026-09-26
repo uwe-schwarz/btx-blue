@@ -14,6 +14,7 @@ test("baud-rate setting defaults to 1200 and persists", async ({ page }) => {
   await page.goto("/000");
   await expect(page.locator("[data-btx-baud-option][value='1200']")).toBeChecked();
 
+  await page.getByRole("button", { name: "Einstellungen", exact: true }).click();
   await page.locator("[data-btx-baud-option][value='LINE']").check();
   await expect(page.locator("[data-btx-baud-option][value='LINE']")).toBeChecked();
 
@@ -23,6 +24,7 @@ test("baud-rate setting defaults to 1200 and persists", async ({ page }) => {
 
 test("numerische Navigation funktioniert", async ({ page }) => {
   await page.goto("/000");
+  await page.getByRole("button", { name: "Direkt verbinden" }).click();
   await page.keyboard.press("2");
   await page.keyboard.press("0");
   await page.keyboard.press("0");
@@ -47,6 +49,7 @@ test("browser back und forward bleiben konsistent", async ({ page }) => {
 
 test("seitenfinder zeigt Treffer und navigiert", async ({ page }) => {
   await page.goto("/800");
+  await page.getByRole("button", { name: "Direkt verbinden" }).click();
   await page.getByLabel("Suche im Seitenfinder").fill("ipv6");
   await expect(page.locator("[data-btx-search-result='0']")).toContainText("340");
   await page.locator("[data-btx-search-result='0']").click();
@@ -62,11 +65,13 @@ test("fortsetzungsseiten sind direkt erreichbar", async ({ page }) => {
 
 test("weiter-link und 404-seite funktionieren", async ({ page }) => {
   await page.goto("/000");
+  await page.getByRole("button", { name: "Direkt verbinden" }).click();
   await page.getByRole("link", { name: "Naechste Folgeseite" }).click();
   await expect(page).toHaveURL(/\/000\/2$/);
 
   await page.goto("/404");
   await expect(page.locator("body")).toContainText("SEITE NICHT VORHANDEN");
+  await page.getByRole("button", { name: "Direkt verbinden" }).click();
   await page.getByRole("link", { name: "000 Zur Startseite" }).click();
   await expect(page).toHaveURL(/\/000$/);
 });

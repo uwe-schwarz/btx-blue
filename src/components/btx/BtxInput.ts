@@ -1,3 +1,4 @@
+import { navigateBtx } from "@/lib/terminal/navigation";
 import type { SearchEntry } from "@/lib/btx/types";
 import { applyBitFlipNoise } from "@/lib/btx/bitflip";
 
@@ -91,43 +92,37 @@ function writeBitFlipNoisePreference(level: number) {
 
 class BtxRevealController {
   private animationFrame = 0;
+  private revealedCells = 0;
+  private baud: BtxBaud = DEFAULT_BAUD;
+  private previousTime = 0;
 
   constructor(private readonly grid: HTMLElement) {}
 
   animate(baud: BtxBaud) {
     this.stop();
+    this.baud = baud;
+    this.revealedCells = 0;
+    this.grid.classList.add("btx-grid--revealing");
+    this.setRevealPosition(0);
+    this.resume();
+  }
 
-    if (baud === "LINE" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  resume() {
+    if (document.documentElement.dataset.connection && document.documentElement.dataset.connection !== "online") return;
+    if (this.baud === "LINE" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       this.revealAll();
       return;
     }
-
-    const charsPerSecond = baud / 10;
-    const durationMs = (BTX_TOTAL_CELLS / charsPerSecond) * 1000;
-    const startTime = performance.now();
-
-    this.grid.classList.add("btx-grid--revealing");
-    this.setRevealPosition(0);
-
+    if (this.animationFrame || this.revealedCells >= BTX_TOTAL_CELLS) return;
+    this.previousTime = performance.now();
+    document.dispatchEvent(new CustomEvent("btx:transfer", { detail: true }));
     const tick = (now: number) => {
-      const elapsed = now - startTime;
-      const revealedCells = Math.min(BTX_TOTAL_CELLS, Math.floor((elapsed / 1000) * charsPerSecond));
-
-      this.setRevealPosition(revealedCells);
-
-      if (revealedCells >= BTX_TOTAL_CELLS) {
-        this.revealAll();
-        return;
-      }
-
-      if (elapsed >= durationMs) {
-        this.revealAll();
-        return;
-      }
-
-      this.animationFrame = window.requestAnimationFrame(tick);
+      this.revealedCells = Math.min(BTX_TOTAL_CELLS, this.revealedCells + (now - this.previousTime) / 1000 * Number(this.baud) / 10);
+      this.previousTime = now;
+      this.setRevealPosition(Math.floor(this.revealedCells));
+      if (this.revealedCells >= BTX_TOTAL_CELLS) this.revealAll();
+      else this.animationFrame = window.requestAnimationFrame(tick);
     };
-
     this.animationFrame = window.requestAnimationFrame(tick);
   }
 
@@ -142,12 +137,14 @@ class BtxRevealController {
 
   private revealAll() {
     this.stop();
+    this.revealedCells = BTX_TOTAL_CELLS;
     this.grid.classList.remove("btx-grid--revealing");
     this.grid.style.removeProperty("--btx-reveal-row");
     this.grid.style.removeProperty("--btx-reveal-col");
   }
 
-  private stop() {
+  stop() {
+    document.dispatchEvent(new CustomEvent("btx:transfer", { detail: false }));
     if (this.animationFrame) {
       window.cancelAnimationFrame(this.animationFrame);
       this.animationFrame = 0;
@@ -242,7 +239,7 @@ function rank(query: string, entries: SearchEntry[]): SearchEntry[] {
     .map((result) => result.entry);
 }
 
-function initNavInput() {
+function initNavInput(signal: AbortSignal) {
   const navInput = document.querySelector<HTMLInputElement>("[data-btx-nav-input]");
   const navForm = document.querySelector<HTMLFormElement>("[data-btx-nav-form]");
   const backButton = document.querySelector<HTMLButtonElement>("[data-btx-back-button]");
@@ -283,20 +280,22 @@ function initNavInput() {
       return;
     }
 
-    window.location.assign(`/${value}`);
+    navigateBtx(`/${value}`);
   };
 
   navForm.addEventListener("submit", (event) => {
     event.preventDefault();
     navigateToPage();
-  });
+  }, { signal });
 
   backButton?.addEventListener("click", () => {
     window.history.back();
-  });
+  }, { signal });
 
   document.addEventListener("keydown", (event) => {
     const active = document.activeElement;
+    if (document.documentElement.dataset.connection && document.documentElement.dataset.connection !== "online") return;
+    if (active instanceof HTMLElement && !active.closest("[data-btx-grid]") && (active.matches("input, select, textarea") || (active.matches("button") && (event.key === "Enter" || event.key === " ")))) return;
     const searchInput = active instanceof HTMLElement && active.dataset.btxSearchInput !== undefined;
     const navActive = active === navInput;
 
@@ -304,26 +303,26 @@ function initNavInput() {
       return;
     }
 
-    if (!navActive && (event.key === "#" || event.key === "*")) {
+    if (event.key === "#" || event.key === "*") {
       event.preventDefault();
       armCommandPrefix(event.key as "#" | "*");
       return;
     }
 
-    if (!navActive && commandPrefix) {
+    if (commandPrefix) {
       const command = event.key.toUpperCase();
 
       if (commandPrefix === "#" && command === "H") {
         event.preventDefault();
         resetCommandPrefix();
-        window.location.assign("/000");
+        navigateBtx("/000");
         return;
       }
 
       if (commandPrefix === "*" && command === "S") {
         event.preventDefault();
         resetCommandPrefix();
-        window.location.assign("/800");
+        navigateBtx("/800");
         return;
       }
 
@@ -339,7 +338,7 @@ function initNavInput() {
 
     if (event.key === "Home") {
       event.preventDefault();
-      window.location.assign("/000");
+      navigateBtx("/000");
       return;
     }
 
@@ -351,13 +350,13 @@ function initNavInput() {
 
     if ((event.key === "PageUp" || event.key === "ArrowLeft") && prevPageLink) {
       event.preventDefault();
-      window.location.assign(prevPageLink.href);
+      navigateBtx(prevPageLink.href);
       return;
     }
 
     if ((event.key === "PageDown" || event.key === "ArrowRight") && nextPageLink) {
       event.preventDefault();
-      window.location.assign(nextPageLink.href);
+      navigateBtx(nextPageLink.href);
       return;
     }
 
@@ -381,10 +380,10 @@ function initNavInput() {
         navigateToPage();
       }
     }
-  });
+  }, { signal });
 }
 
-function initSearch(noiseController: BtxNoiseController) {
+function initSearch(noiseController: BtxNoiseController, signal: AbortSignal) {
   const searchInput = document.querySelector<HTMLInputElement>("[data-btx-search-input]");
   const resultNodes = [...document.querySelectorAll<HTMLAnchorElement>("[data-btx-search-result]")];
   const indexNode = document.getElementById("btx-search-index");
@@ -423,22 +422,22 @@ function initSearch(noiseController: BtxNoiseController) {
     });
   };
 
-  searchInput.addEventListener("input", render);
+  searchInput.addEventListener("input", render, { signal });
   searchInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
       const firstResult = rank(searchInput.value, entries)[0];
 
       if (firstResult) {
-        window.location.assign(firstResult.route);
+        navigateBtx(firstResult.route);
       }
     }
-  });
+  }, { signal });
 
   render();
 }
 
-function initBaudControl() {
+function initBaudControl(signal: AbortSignal) {
   const grid = document.querySelector<HTMLElement>("[data-btx-grid]");
   const baudForm = document.querySelector<HTMLFormElement>("[data-btx-baud-form]");
   const baudInputs = [...document.querySelectorAll<HTMLInputElement>("[data-btx-baud-option]")];
@@ -455,6 +454,11 @@ function initBaudControl() {
   });
 
   revealController.animate(initialBaud);
+  signal.addEventListener("abort", () => revealController.stop(), { once: true });
+  document.addEventListener("btx:connection", () => {
+    if (document.documentElement.dataset.connection === "online") revealController.resume();
+    else revealController.stop();
+  }, { signal });
 
   if (!baudForm) {
     return;
@@ -470,10 +474,10 @@ function initBaudControl() {
     const baud = parseBaud(target.value);
     writeBaudPreference(baud);
     revealController.animate(baud);
-  });
+  }, { signal });
 }
 
-function initBitFlipControl(): BtxNoiseController | null {
+function initBitFlipControl(signal: AbortSignal): BtxNoiseController | null {
   const grid = document.querySelector<HTMLElement>("[data-btx-grid]");
   const enabledInput = document.querySelector<HTMLInputElement>("[data-btx-noise-enabled]");
   const levelInput = document.querySelector<HTMLInputElement>("[data-btx-noise-level]");
@@ -498,23 +502,28 @@ function initBitFlipControl(): BtxNoiseController | null {
   enabledInput.checked = readBitFlipEnabledPreference();
   levelInput.value = String(readBitFlipNoisePreference());
 
-  enabledInput.addEventListener("change", syncUi);
-  levelInput.addEventListener("input", syncUi);
+  enabledInput.addEventListener("change", syncUi, { signal });
+  levelInput.addEventListener("input", syncUi, { signal });
 
   syncUi();
   return noiseController;
 }
 
+let screenEvents: AbortController | undefined;
+
 export function initBtxScreen() {
-  const noiseController = initBitFlipControl();
-  initBaudControl();
-  initNavInput();
+  screenEvents?.abort();
+  screenEvents = new AbortController();
+  const signal = screenEvents.signal;
+  const noiseController = initBitFlipControl(signal);
+  initBaudControl(signal);
+  initNavInput(signal);
 
   if (noiseController) {
-    initSearch(noiseController);
+    initSearch(noiseController, signal);
     noiseController.refresh();
     return;
   }
 
-  initSearch(new BtxNoiseController(document));
+  initSearch(new BtxNoiseController(document), signal);
 }
