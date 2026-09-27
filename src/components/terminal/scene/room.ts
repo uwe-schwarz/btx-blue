@@ -10,7 +10,45 @@ export function buildDesk(m: Materials) {
   mesh(group, roundedBox(DESK.width, 0.32, DESK.depth, 0.07, 3), m.wood, [0, -0.16, DESK.centerZ]);
   // Front apron below the top edge.
   mesh(group, roundedBox(DESK.width - 0.6, 1.4, 0.12, 0.03), m.wood, [0, -1.0, DESK.centerZ + DESK.depth / 2 - 0.35]);
+  // Panel legs down to the floor and a modesty panel at the back.
+  for (const side of [-1, 1]) mesh(group, roundedBox(0.3, 7.1, DESK.depth - 0.5, 0.04), m.wood, [side * (DESK.width / 2 - 0.35), -3.85, DESK.centerZ]);
+  mesh(group, roundedBox(DESK.width - 1.1, 3.4, 0.14, 0.03), m.wood, [0, -1.9, DESK.centerZ - DESK.depth / 2 + 0.45]);
   return group;
+}
+
+/** Photo plate of the wall: its size and where it hangs. */
+export const WALL = { left: -9.7, right: 10.3, bottom: -5.915, top: 7.415, extension: 5, ceiling: 16 };
+
+/**
+ * The back wall: the room photo in the middle, continued to both sides by mirroring its outer
+ * strips (the cropped window becomes a two-pane window) and upwards to the ceiling, darkening
+ * away from the lamp. The mapping is piecewise linear, so a small grid of vertices is exact.
+ */
+export function backWallGeometry() {
+  const { left, right, bottom, top, extension, ceiling } = WALL;
+  const columns = [[left - extension, 0.25, 0.72], [left, 0, 1], [right, 1, 1], [right + extension, 0.75, 0.78]] as const;
+  const rows = [[bottom, 0, 1], [top, 1, 1], [ceiling, 0.94, 0.28]] as const;
+  const positions: number[] = [], uvs: number[] = [], colors: number[] = [], index: number[] = [];
+  for (const [y, v, rowLight] of rows) {
+    for (const [x, u, columnLight] of columns) {
+      positions.push(x, y, 0);
+      uvs.push(u, v);
+      const light = rowLight * columnLight;
+      colors.push(light, light, light);
+    }
+  }
+  for (let row = 0; row < rows.length - 1; row++) {
+    for (let column = 0; column < columns.length - 1; column++) {
+      const a = row * columns.length + column, b = a + 1, c = a + columns.length, d = c + 1;
+      index.push(a, b, c, b, d, c);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(index);
+  return geometry;
 }
 
 /** Brass desk lamp with an enamelled shade; returns where the bulb sits and where it points. */

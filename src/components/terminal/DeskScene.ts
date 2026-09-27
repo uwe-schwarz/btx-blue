@@ -18,7 +18,7 @@ import { buildMonitor, RASTER } from "./scene/monitor";
 import { buildKeyboard, type KeyboardKey } from "./scene/keyboard";
 import { buildHandset, buildTelephone, CORD_JACK, CRADLE, HANDSET_CORD, PLUNGER_Y } from "./scene/telephone";
 import { buildCoupler, buildDirectModem, SEATED } from "./scene/coupler";
-import { buildDesk, buildLamp, buildNotepad, buildProps } from "./scene/room";
+import { backWallGeometry, buildDesk, buildLamp, buildNotepad, buildProps, WALL } from "./scene/room";
 import { SpiralCord } from "./scene/cord";
 
 export type DeskAction = "receiver" | "dial" | "power" | "brightness" | "lamp" | "speed" | "screen" | `key:${string}`;
@@ -158,16 +158,17 @@ export class DeskScene {
     this.scene.add(buildDesk(this.m));
     const roomMap = new THREE.TextureLoader().load("/textures/room.jpg", () => { this.dirty = true; this.kick(); });
     roomMap.colorSpace = THREE.SRGBColorSpace;
-    this.backdrop = new THREE.MeshBasicMaterial({ map: roomMap, toneMapped: false, fog: false });
+    this.backdrop = new THREE.MeshBasicMaterial({ map: roomMap, vertexColors: true, toneMapped: false, fog: false });
     // The engraving hangs above the desk between terminal and phone; the window and fern sit to the right.
-    place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(20, 13.33), this.backdrop), [0.3, 0.75, BACKDROP_Z]);
-    const catcher = place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(20, 13.33), new THREE.ShadowMaterial({ opacity: 0.42 })), [0.3, 0.75, BACKDROP_Z + 0.05]);
+    place(this.scene, new THREE.Mesh(backWallGeometry(), this.backdrop), [0, 0, BACKDROP_Z]);
+    const catcher = place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(31, 22), new THREE.ShadowMaterial({ opacity: 0.42 })), [0.3, 5, BACKDROP_Z + 0.05]);
     catcher.receiveShadow = true;
     // Side walls and a floor, so free navigation never looks into the void around the wall photo.
     const plaster = new THREE.MeshStandardMaterial({ color: 0x3b3a24, roughness: 1 });
-    place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(15, 16), plaster), [-9.7, 1.2, 3.1], [0, Math.PI / 2, 0]);
-    place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(15, 16), plaster), [10.3, 1.2, 3.1], [0, -Math.PI / 2, 0]);
-    place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(22, 16), new THREE.MeshStandardMaterial({ color: 0x21180f, roughness: 1 })), [0.3, -7.4, 3.6], [-Math.PI / 2, 0, 0]);
+    const sideDepth = 32, sideCenter = BACKDROP_Z + sideDepth / 2;
+    place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(sideDepth, 24), plaster), [WALL.left - WALL.extension, 4.3, sideCenter], [0, Math.PI / 2, 0]);
+    place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(sideDepth, 24), plaster), [WALL.right + WALL.extension, 4.3, sideCenter], [0, -Math.PI / 2, 0]);
+    place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(31, sideDepth), new THREE.MeshStandardMaterial({ color: 0x21180f, roughness: 1 })), [0.3, -7.4, sideCenter], [-Math.PI / 2, 0, 0]);
 
     this.monitor = buildMonitor(this.m, this.atlas, this.raster);
     place(this.scene, this.monitor.group, LAYOUT.monitor.toArray());
@@ -254,7 +255,7 @@ export class DeskScene {
     this.controls.zoomToCursor = true;
     this.controls.screenSpacePanning = true;
     this.controls.minDistance = 0.8;
-    this.controls.maxDistance = 19;
+    this.controls.maxDistance = 27;
     this.controls.maxPolarAngle = THREE.MathUtils.degToRad(87);
     this.controls.minAzimuthAngle = -1.15;
     this.controls.maxAzimuthAngle = 1.15;
@@ -468,7 +469,7 @@ export class DeskScene {
   private clampCamera() {
     const target = this.controls.target, position = this.camera.position;
     target.set(THREE.MathUtils.clamp(target.x, -6.6, 7.6), THREE.MathUtils.clamp(target.y, 0, 4.6), THREE.MathUtils.clamp(target.z, -3.3, 4.2));
-    position.set(THREE.MathUtils.clamp(position.x, -9.2, 9.8), THREE.MathUtils.clamp(position.y, 0.3, 11.5), Math.max(position.z, -3.6));
+    position.set(THREE.MathUtils.clamp(position.x, -13.4, 14), THREE.MathUtils.clamp(position.y, 0.3, 14), THREE.MathUtils.clamp(position.z, -3.6, 26));
   }
 
   dial(plan: DialPlan) {
