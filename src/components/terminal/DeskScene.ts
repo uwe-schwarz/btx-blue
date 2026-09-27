@@ -1,61 +1,64 @@
 import * as THREE from "three";
-import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { CSS3DObject, CSS3DRenderer } from "three/addons/renderers/CSS3DRenderer.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
-import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
 import type { ConnectionState, ModemSpeed } from "@/lib/terminal/connection";
+import type { HandsetPlace } from "@/lib/terminal/audio";
+import { dialRotation, type DialPlan } from "@/lib/terminal/dial";
+import { DecalAtlas, V, place } from "./scene/kit";
+import { createMaterials, type Materials } from "./scene/materials";
+import { ScreenRaster } from "./scene/raster";
+import { buildMonitor, RASTER } from "./scene/monitor";
+import { buildKeyboard, type KeyboardKey } from "./scene/keyboard";
+import { buildHandset, buildTelephone, CORD_JACK, CRADLE, HANDSET_CORD, PLUNGER_Y } from "./scene/telephone";
+import { buildCoupler, buildDirectModem, SEATED } from "./scene/coupler";
+import { buildDesk, buildLamp, buildNotepad, buildProps } from "./scene/room";
+import { SpiralCord } from "./scene/cord";
 
 export type DeskAction = "receiver" | "dial" | "power" | "brightness" | "lamp" | "speed" | "screen" | `key:${string}`;
-type Material = THREE.Material;
-const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
-function roundedRect(width: number, height: number, radius: number) {
-  const shape = new THREE.Shape();
-  const x = -width / 2, y = -height / 2;
-  shape.moveTo(x + radius, y);
-  shape.lineTo(x + width - radius, y); shape.quadraticCurveTo(x + width, y, x + width, y + radius);
-  shape.lineTo(x + width, y + height - radius); shape.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  shape.lineTo(x + radius, y + height); shape.quadraticCurveTo(x, y + height, x, y + height - radius);
-  shape.lineTo(x, y + radius); shape.quadraticCurveTo(x, y, x + radius, y);
-  return shape;
-}
+const LAYOUT = {
+  monitor: V(-1.1, 0, -0.9),
+  keyboard: V(-1.1, 0, 2.4),
+  phone: { position: V(3.8, 0, -1.25), rotation: -0.36 },
+  coupler: { position: V(3.95, 0, 1.75), rotation: -0.22 },
+  lamp: { position: V(-6.15, 0.66, -2.3), rotation: 0.12 },
+  notepad: { position: V(-4.75, 0, 2.55), rotation: 0.2 },
+};
+const DESK_TARGET = V(0.45, 1.7, 0.2);
+const LAMP_AIM = V(-2.6, 0, 1.6);
+const BACKDROP_Z = -4.4;
 
-function box(parent: THREE.Object3D, size: [number, number, number], position: [number, number, number], material: Material, radius = 0.04) {
-  const mesh = new THREE.Mesh(new RoundedBoxGeometry(...size, 5, radius), material);
-  mesh.position.set(...position); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
-}
-function cylinder(parent: THREE.Object3D, top: number, bottom: number, height: number, position: [number, number, number], material: Material, segments = 48) {
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(top, bottom, height, segments), material);
-  mesh.position.set(...position); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
-}
-function tube(parent: THREE.Object3D, points: THREE.Vector3[], radius: number, material: Material, segments = 64) {
-  const mesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), segments, radius, 8, false), material);
-  mesh.castShadow = true; parent.add(mesh); return mesh;
-}
-function label(parent: THREE.Object3D, text: string, width: number, height: number, position: [number, number, number], color = "#3a392e", background?: string, font = "monospace") {
-  const canvas = document.createElement("canvas"); canvas.width = width < 0.4 ? 128 : width < 1 ? 256 : 512; canvas.height = Math.max(32, Math.round(canvas.width * height / width));
-  const ctx = canvas.getContext("2d")!;
-  if (background) { ctx.fillStyle = background; ctx.fillRect(0, 0, canvas.width, canvas.height); }
-  ctx.fillStyle = color; ctx.font = `${Math.round(canvas.height * 0.62)}px ${font}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2, canvas.width * 0.94);
-  const map = new THREE.CanvasTexture(canvas); map.colorSpace = THREE.SRGBColorSpace;
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, toneMapped: false }));
-  mesh.position.set(...position); parent.add(mesh); return mesh;
-}
-function roughTexture() {
-  const data = new Uint8Array(128 * 128 * 4);
-  let seed = 1985;
-  for (let i = 0; i < data.length; i += 4) {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    const value = 150 + seed % 100; data[i] = value; data[i + 1] = value; data[i + 2] = value; data[i + 3] = 255;
-  }
-  const texture = new THREE.DataTexture(data, 128, 128); texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(5, 5); texture.needsUpdate = true;
-  return texture;
-}
+const GradeShader = {
+  uniforms: { tDiffuse: { value: null }, uResolution: { value: new THREE.Vector2(1, 1) } },
+  vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse; uniform vec2 uResolution; varying vec2 vUv;
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      vec2 q = (vUv - 0.5) * vec2(uResolution.x / uResolution.y, 1.0);
+      color.rgb *= mix(0.62, 1.0, smoothstep(1.05, 0.28, length(q)));
+      // Warm, slightly lifted blacks like 1980s colour negative film.
+      color.rgb = color.rgb * vec3(1.02, 1.0, 0.96) + vec3(0.008, 0.006, 0.004);
+      color.rgb += (hash(floor(vUv * uResolution)) - 0.5) * 0.022;
+      gl_FragColor = color;
+    }`,
+};
+
+/** Render quality tiers, from software rasterisers up to discrete GPUs. */
+const QUALITY = [
+  { ratio: 0.6, samples: 0, ao: false, bloom: false, shadow: 1024, transmission: false },
+  { ratio: 1.25, samples: 2, ao: false, bloom: true, shadow: 1024, transmission: false },
+  { ratio: 1.75, samples: 4, ao: true, bloom: true, shadow: 2048, transmission: true },
+] as const;
+
+const easeInOut = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
 
 export class DeskScene {
   private scene = new THREE.Scene();
@@ -64,89 +67,173 @@ export class DeskScene {
   private css = new CSS3DRenderer();
   private composer: EffectComposer;
   private ao: GTAOPass;
-  private dirty = true;
-  private lastRenderTime = 0;
-  private camera = new THREE.PerspectiveCamera(37, 1, 0.1, 80);
+  private bloom: UnrealBloomPass;
+  private grade: ShaderPass;
+  private camera = new THREE.PerspectiveCamera(32, 1, 0.1, 120);
   private screenObject: CSS3DObject;
-  private receiver = new THREE.Group();
-  private dial = new THREE.Group();
-  private phone = new THREE.Group();
-  private lamp = new THREE.PointLight(0xffc27c, 28, 13, 2);
-  private screenLight = new THREE.PointLight(0x3659ff, 2.5, 5, 2);
-  private lampShade?: THREE.Mesh;
-  private lampBulb = new THREE.MeshStandardMaterial({ color: 0xffdd97, emissive: 0xffbf63, emissiveIntensity: 2.5 });
-  private powerLed = new THREE.MeshStandardMaterial({ color: 0xaade82, emissive: 0x64ab2b, emissiveIntensity: 1.8 });
-  private receiveLed = new THREE.MeshStandardMaterial({ color: 0x413726, emissive: 0xffac32, emissiveIntensity: 0 });
-  private directModem = new THREE.Group();
-  private coupler = new THREE.Group();
+  private raster: ScreenRaster;
+  private atlas = new DecalAtlas(2048);
+  private m: Materials;
+  private monitor: ReturnType<typeof buildMonitor>;
+  private keyboard: ReturnType<typeof buildKeyboard>;
+  private phone: ReturnType<typeof buildTelephone>;
+  private handset: THREE.Group;
+  private coupler: ReturnType<typeof buildCoupler>;
+  private modem: ReturnType<typeof buildDirectModem>;
+  private lamp: ReturnType<typeof buildLamp>;
+  private cord: SpiralCord;
+  private backdrop: THREE.MeshBasicMaterial;
+  private lampLight = new THREE.SpotLight(0xffb36b, 70, 0, 0.82, 0.85, 1.6);
+  private bulbLight = new THREE.PointLight(0xffb060, 2.2, 2.4, 2);
+  private screenLight: THREE.RectAreaLight;
+  private environment?: THREE.WebGLRenderTarget;
   private clicks: THREE.Object3D[] = [];
-  private pressedKeys = new Map<string, THREE.Mesh>();
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2();
+  private parallax = new THREE.Vector2();
   private hovered?: THREE.Object3D;
-  private lastPointer = new THREE.Vector2();
-  private handsetCable?: THREE.Mesh;
-  private frame = 0;
-  private previousTime = 0;
+  private screenWorld = new THREE.Vector3();
+  private lookAt = DESK_TARGET.clone();
   private focused = false;
-  private reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-  private resizeObserver: ResizeObserver;
   private connection: ConnectionState = "idle";
   private acoustic = true;
+  private speed: ModemSpeed = 1200;
   private transferring = false;
-  private cameraTarget = V(-0.3, 1.72, 0.25);
-  private lookAt = V(-0.3, 1.72, 0.25);
-  private screenCenter = V(-1.35, 2.52, 0.99);
-  private handRest = V(2.35, 1.22, -0.38);
-  private handCoupled = V(2.35, 0.67, 1.44);
-  private handRaised = V(2.5, 2.0, 0.7);
-  private targetReceiver = this.handRest.clone();
+  private lampOn = true;
+  private powered = true;
+  private handsetPlace: HandsetPlace = "cradle";
+  private tween?: { from: THREE.Vector3; fromQuaternion: THREE.Quaternion; to: HandsetPlace; start: number; duration: number; lift: number; resolve: () => void };
+  private dialPlan?: { plan: DialPlan; start: number };
+  private pressed = new Map<KeyboardKey, number>();
+  private blinkUntil = 0;
+  private dirty = true;
+  private shadowsDirty = true;
+  private frame = 0;
+  private previousTime = 0;
   private stopped = false;
-  private environment: THREE.WebGLRenderTarget;
+  private reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+  private resizeObserver: ResizeObserver;
+  private down = { x: 0, y: 0 };
+  private scheduled = false;
+  private quality = QUALITY.length - 1;
+  private frameTimes: number[] = [];
+  private renderedPrevious = false;
+  private settleFrames = 0;
   private handleVisibility = () => {
-    if (document.hidden) cancelAnimationFrame(this.frame);
-    else if (!this.stopped) { this.previousTime = performance.now(); this.frame = requestAnimationFrame(this.render); }
+    if (document.hidden) { cancelAnimationFrame(this.frame); this.scheduled = false; }
+    else if (!this.stopped) { this.previousTime = performance.now(); this.kick(); }
   };
 
   constructor(private stage: HTMLElement, screen: HTMLElement, private onAction: (action: DeskAction) => void, private tooltip: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+    this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.autoUpdate = false;
-    this.renderer.shadowMap.needsUpdate = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.04;
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.domElement.className = "desk-webgl";
     this.renderer.domElement.setAttribute("aria-hidden", "true");
     this.css.domElement.className = "desk-html";
     // Focus must never scroll HTML independently of the WebGL screen bezel.
     this.css.domElement.style.overflow = "clip";
     stage.append(this.renderer.domElement, this.css.domElement);
-    const pmrem = new THREE.PMREMGenerator(this.renderer);
-    const environment = new RoomEnvironment();
-    this.environment = pmrem.fromScene(environment, 0.04);
-    this.scene.environment = this.environment.texture;
-    this.scene.environmentIntensity = 0.18;
-    environment.dispose(); pmrem.dispose();
-    this.scene.background = new THREE.Color(0x22231e);
-    this.scene.fog = new THREE.FogExp2(0x22231e, 0.024);
-    this.build();
-    const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 2 });
+    RectAreaLightUniformsLib.init();
+
+    this.m = createMaterials(() => { this.dirty = true; this.kick(); });
+    this.scene.background = new THREE.Color(0x0d0e0b);
+    this.raster = new ScreenRaster(screen);
+    this.raster.onChange = () => this.kick();
+    screen.classList.add("crt-rendered");
+
+    // Room, desk and every device.
+    this.scene.add(buildDesk(this.m));
+    const roomMap = new THREE.TextureLoader().load("/textures/room.jpg", () => { this.dirty = true; this.kick(); });
+    roomMap.colorSpace = THREE.SRGBColorSpace;
+    this.backdrop = new THREE.MeshBasicMaterial({ map: roomMap, toneMapped: false, fog: false });
+    // The engraving hangs above the desk between terminal and phone; the window and fern sit to the right.
+    place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(20, 13.33), this.backdrop), [0.3, 0.75, BACKDROP_Z]);
+    const catcher = place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(20, 13.33), new THREE.ShadowMaterial({ opacity: 0.42 })), [0.3, 0.75, BACKDROP_Z + 0.05]);
+    catcher.receiveShadow = true;
+
+    this.monitor = buildMonitor(this.m, this.atlas, this.raster);
+    place(this.scene, this.monitor.group, LAYOUT.monitor.toArray());
+    this.keyboard = buildKeyboard(this.m, this.atlas);
+    place(this.scene, this.keyboard.group, LAYOUT.keyboard.toArray());
+    this.phone = buildTelephone(this.m, this.atlas);
+    place(this.scene, this.phone.group, LAYOUT.phone.position.toArray(), [0, LAYOUT.phone.rotation, 0]);
+    this.handset = buildHandset(this.m, this.atlas);
+    this.scene.add(this.handset);
+    this.coupler = buildCoupler(this.m, this.atlas);
+    place(this.scene, this.coupler.group, LAYOUT.coupler.position.toArray(), [0, LAYOUT.coupler.rotation, 0]);
+    this.modem = buildDirectModem(this.m, this.atlas);
+    place(this.scene, this.modem.group, LAYOUT.coupler.position.toArray(), [0, LAYOUT.coupler.rotation, 0]);
+    this.modem.group.visible = false;
+    this.lamp = buildLamp(this.m);
+    place(this.scene, this.lamp.group, LAYOUT.lamp.position.toArray(), [0, LAYOUT.lamp.rotation, 0]);
+    this.scene.add(buildProps(this.m, this.atlas));
+    const notepad = buildNotepad(this.m, this.atlas);
+    place(this.scene, notepad, LAYOUT.notepad.position.toArray(), [0, LAYOUT.notepad.rotation, 0]);
+    this.cord = new SpiralCord(this.m.cord);
+    this.scene.add(this.cord.mesh);
+    this.scene.updateMatrixWorld(true);
+    this.aimLamp();
+
+    // Lighting: a warm task lamp, the CRT's own blue glow and cold moonlight from the window.
+    this.lampLight.castShadow = true;
+    this.lampLight.shadow.mapSize.set(2048, 2048);
+    this.lampLight.shadow.bias = -0.0004;
+    this.lampLight.shadow.normalBias = 0.02;
+    this.lampLight.shadow.radius = 5;
+    this.lampLight.shadow.camera.near = 0.5;
+    this.lampLight.shadow.camera.far = 30;
+    this.scene.add(this.lampLight, this.lampLight.target, this.bulbLight);
+    this.screenLight = new THREE.RectAreaLight(0x6a86ff, 4, RASTER.width, RASTER.height);
+    this.monitor.tube.group.getWorldPosition(this.screenWorld);
+    this.screenLight.position.copy(this.screenWorld).add(V(0, 0, 0.12));
+    this.screenLight.lookAt(this.screenWorld.clone().add(V(0, -0.35, 5)));
+    this.scene.add(this.screenLight);
+    this.scene.add(new THREE.HemisphereLight(0x6d7a92, 0x2c1f14, 0.32));
+    const moon = new THREE.DirectionalLight(0x8fa9dd, 0.55);
+    moon.position.set(9, 7, -4);
+    this.scene.add(moon);
+    this.buildEnvironment();
+
+    // Post-processing: ambient occlusion, bloom for phosphor and bulb, film grade.
+    const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
     this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.ao = new GTAOPass(this.scene, this.camera, 512, 512);
-    this.ao.updateGtaoMaterial({ radius: 0.35, thickness: 0.8, samples: 8, distanceExponent: 1.4 });
-    this.ao.blendIntensity = 0.7;
+    this.ao.updateGtaoMaterial({ radius: 0.45, thickness: 0.9, samples: 12, distanceExponent: 1.5 });
+    this.ao.blendIntensity = 0.85;
     this.composer.addPass(this.ao);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.34, 0.5, 0.95);
+    this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
-    this.composer.addPass(new SMAAPass());
+    this.grade = new ShaderPass(GradeShader);
+    this.composer.addPass(this.grade);
+    this.setQuality(this.softwareRenderer() ? 0 : QUALITY.length - 1);
+
+    // The HTML screen stays interactive, aligned with the phosphor raster.
     this.screenObject = new CSS3DObject(screen);
-    this.screenObject.position.copy(this.screenCenter);
-    this.screenObject.scale.setScalar(3.52 / 800);
+    this.screenObject.position.copy(this.screenWorld).add(V(0, 0, -0.035));
+    this.screenObject.scale.setScalar(RASTER.width / 800);
     this.htmlScene.add(this.screenObject);
-    this.camera.position.set(0.7, 5.15, 12.9);
+
+    this.interactive(this.monitor.power, "power", "Netzschalter");
+    for (const knob of this.monitor.knobs) this.interactive(knob, "brightness", "Helligkeit und Kontrast");
+    for (const key of this.keyboard.keys) this.interactive(key.group, `key:${key.key}`, keyTitle(key.key));
+    this.interactive(this.handset, "receiver", "Hörer abheben / einlegen");
+    this.interactive(this.phone.dial, "dial", "01910 wählen");
+    this.interactive(this.coupler.group, "receiver", "Akustikkoppler Dataphon s21d");
+    this.interactive(this.coupler.slider, "speed", "Übertragungsrate wählen");
+    this.interactive(this.modem.group, "speed", "Modemprofil wählen");
+    this.interactive(this.lamp.group, "lamp", "Schreibtischlampe schalten");
+    this.interactive(this.monitor.tube.group, "screen", "Näher an den Bildschirm");
+
+    this.camera.position.set(1.2, 6.5, 18);
+    this.applyHandset("cradle");
     stage.addEventListener("pointermove", this.pointerMove);
     stage.addEventListener("pointerdown", this.pointerDown);
     stage.addEventListener("pointerup", this.pointerUp);
@@ -156,296 +243,396 @@ export class DeskScene {
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(stage);
     this.resize();
-    this.frame = requestAnimationFrame(this.render);
+    this.kick();
   }
 
   private interactive(object: THREE.Object3D, action: DeskAction, title: string) {
-    object.userData = { action, title }; this.clicks.push(object); return object;
+    object.userData.action = action;
+    object.userData.title = title;
+    this.clicks.push(object);
   }
 
-  private build() {
-    const grain = roughTexture();
-    const abs = new THREE.TextureLoader().load("/textures/aged-abs.jpg", () => { this.dirty = true; });
-    abs.colorSpace = THREE.SRGBColorSpace; abs.wrapS = abs.wrapT = THREE.RepeatWrapping; abs.repeat.set(2, 2); abs.anisotropy = 8;
-    const plastic = new THREE.MeshStandardMaterial({ map: abs, color: 0xb9b09d, roughness: 0.63, bumpMap: abs, bumpScale: 0.008 });
-    const darkPlastic = new THREE.MeshStandardMaterial({ color: 0x343934, roughness: 0.6, bumpMap: grain, bumpScale: 0.003 });
-    const rubber = new THREE.MeshStandardMaterial({ color: 0x101310, roughness: 0.91 });
-    const green = new THREE.MeshPhysicalMaterial({ color: 0x355137, roughness: 0.26, clearcoat: 0.5, clearcoatRoughness: 0.22, bumpMap: grain, bumpScale: 0.003 });
-    const brass = new THREE.MeshStandardMaterial({ color: 0x947044, metalness: 0.82, roughness: 0.27 });
-    const chrome = new THREE.MeshStandardMaterial({ color: 0xaaa99d, metalness: 0.85, roughness: 0.2 });
-    const woodMap = new THREE.TextureLoader().load("/textures/walnut.jpg", () => { this.dirty = true; });
-    woodMap.colorSpace = THREE.SRGBColorSpace; woodMap.wrapS = woodMap.wrapT = THREE.RepeatWrapping; woodMap.repeat.set(2, 1.3); woodMap.anisotropy = 8;
-    const wood = new THREE.MeshStandardMaterial({ map: woodMap, roughness: 0.36, bumpMap: woodMap, bumpScale: 0.025 });
-    box(this.scene, [17, 0.22, 10], [0, -0.12, 0], wood, 0.06);
-    const wall = new THREE.MeshStandardMaterial({ color: 0x4f5040, roughness: 1, bumpMap: grain, bumpScale: 0.014 });
-    box(this.scene, [26, 13, 0.2], [0, 5, -4.2], wall);
-    const roomMap = new THREE.TextureLoader().load("/textures/room.jpg", () => { this.dirty = true; });
-    roomMap.colorSpace = THREE.SRGBColorSpace; roomMap.anisotropy = 8;
-    const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(18, 12), new THREE.MeshBasicMaterial({ map: roomMap, toneMapped: false }));
-    backdrop.position.set(0, -0.3, -4.06); this.scene.add(backdrop);
-    const ambient = new THREE.HemisphereLight(0xd7e1e7, 0x6a4830, 0.32); this.scene.add(ambient);
-    const key = new THREE.SpotLight(0xffcf90, 62, 24, 0.8, 0.8, 1.5); key.position.set(-4.5, 6.5, 4); key.target.position.set(-0.5, 1, 0);
-    key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0003; key.shadow.normalBias = 0.025; key.shadow.radius = 4;
-    this.scene.add(key, key.target);
-    const rim = new THREE.DirectionalLight(0x8ba7cb, 0.5); rim.position.set(5, 5, -2); this.scene.add(rim);
-    this.screenLight.position.set(-1.3, 2.0, 1.5); this.scene.add(this.screenLight);
+  private aimLamp() {
+    const bulb = this.lamp.bulb.getWorldPosition(new THREE.Vector3());
+    this.lampLight.position.copy(bulb);
+    this.lampLight.target.position.copy(LAMP_AIM);
+    this.bulbLight.position.copy(bulb);
+  }
 
-    // CRT cabinet: separate back shell, bevelled front surround and recessed glass opening.
-    const terminal = new THREE.Group(); terminal.position.x = -1.35; this.scene.add(terminal);
-    box(terminal, [3.8, 3.0, 2.25], [0, 2.4, -0.53], plastic, 0.22);
-    box(terminal, [4.36, 3.51, 0.26], [0, 2.35, 0.56], plastic, 0.15);
-    const face = roundedRect(4.32, 3.5, 0.23);
-    const hole = roundedRect(3.76, 2.83, 0.22); face.holes.push(new THREE.Path(hole.getPoints().map((p) => p.add(new THREE.Vector2(0, 0.16)))));
-    const surround = new THREE.Mesh(new THREE.ExtrudeGeometry(face, { depth: 0.15, bevelEnabled: true, bevelSegments: 4, steps: 1, bevelSize: 0.07, bevelThickness: 0.08, curveSegments: 16 }), plastic);
-    surround.position.set(0, 2.35, 0.72); surround.castShadow = true; surround.receiveShadow = true; terminal.add(surround);
-    const inner = roundedRect(3.85, 2.92, 0.24); inner.holes.push(new THREE.Path(roundedRect(3.52, 2.64, 0.18).getPoints()));
-    const bezel = new THREE.Mesh(new THREE.ExtrudeGeometry(inner, { depth: 0.04, bevelEnabled: true, bevelSegments: 4, bevelSize: 0.07, bevelThickness: 0.065, curveSegments: 16 }), darkPlastic);
-    bezel.position.set(0, 2.52, 0.86); terminal.add(bezel);
-    box(terminal, [3.49, 2.61, 0.04], [0, 2.52, 0.94], new THREE.MeshBasicMaterial({ color: 0x020d29 }), 0.16);
-    box(terminal, [2.0, 0.22, 1.4], [0, 0.47, -0.25], darkPlastic, 0.1);
-    box(terminal, [2.65, 0.26, 1.8], [0, 0.21, -0.15], plastic, 0.09);
-    for (let i = 0; i < 15; i++) {
-      box(terminal, [0.025, 0.54, 0.055], [-1.75 + i * 0.077, 3.94, -0.42], rubber, 0.009).rotation.x = Math.PI / 2;
-      box(terminal, [0.018, 0.025, 0.98], [-1.909, 2.0 + i * 0.064, -0.57], darkPlastic, 0.005);
+  /** Reflections for glass and glossy plastic: a dark room, the lamp's hot spot and the window. */
+  private buildEnvironment() {
+    const room = new THREE.Scene();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(40, 20, 40), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x1d1e19).multiplyScalar(this.lampOn ? 1 : 0.35), side: THREE.BackSide }));
+    room.add(box);
+    if (this.lampOn) {
+      const glow = new THREE.Mesh(new THREE.SphereGeometry(1.6, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffb56a).multiplyScalar(14) }));
+      glow.position.set(-5, 3.5, 1.5);
+      room.add(glow);
+      const wall = new THREE.Mesh(new THREE.PlaneGeometry(14, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x6a5a3a).multiplyScalar(0.9) }));
+      wall.position.set(-4, 3, -9.5);
+      room.add(wall);
     }
-    for (const x of [-1.99, 1.99]) {
-      const screw = cylinder(terminal, 0.025, 0.025, 0.007, [x, 0.78, 0.967], chrome, 20); screw.rotation.x = Math.PI / 2;
-      box(terminal, [0.028, 0.006, 0.003], [x, 0.78, 0.973], rubber, 0.001);
-    }
-    label(terminal, "Btx", 0.35, 0.16, [-1.67, 0.93, 0.98], "#454d45", undefined, "serif");
-    label(terminal, "BILDSCHIRMTEXT", 1.25, 0.075, [-0.75, 0.92, 0.975]);
-    const power = box(terminal, [0.24, 0.14, 0.07], [1.72, 0.91, 0.985], darkPlastic, 0.015);
-    this.interactive(power, "power", "Netzschalter");
-    label(terminal, "I / O", 0.16, 0.07, [1.72, 0.91, 1.025], "#c9c8b5");
-    box(terminal, [0.035, 0.035, 0.02], [1.49, 0.91, 1.0], this.powerLed, 0.008);
-    const knob = cylinder(terminal, 0.065, 0.065, 0.07, [1.15, 0.91, 1.0], darkPlastic); knob.rotation.x = Math.PI / 2;
-    this.interactive(knob, "brightness", "Helligkeit einstellen");
-    label(terminal, "☼", 0.1, 0.09, [0.99, 0.91, 1.01]);
+    const window = new THREE.Mesh(new THREE.PlaneGeometry(4, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x3e5a8c).multiplyScalar(1.2) }));
+    window.position.set(9, 4, -6);
+    window.lookAt(0, 3, 0);
+    room.add(window);
+    // The room behind the viewer, faintly lit: what the curved CRT glass mirrors back.
+    const behind = new THREE.Mesh(new THREE.PlaneGeometry(26, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x4a3b28).multiplyScalar(this.lampOn ? 0.55 : 0.12) }));
+    behind.position.set(0, 3, 16);
+    behind.lookAt(0, 3, 0);
+    room.add(behind);
+    const door = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 7), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd9a0).multiplyScalar(this.lampOn ? 1.6 : 0.3) }));
+    door.position.set(-7, 4, 15);
+    door.lookAt(0, 3, 0);
+    room.add(door);
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.environment?.dispose();
+    this.environment = pmrem.fromScene(room, 0.03);
+    this.scene.environment = this.environment.texture;
+    this.scene.environmentIntensity = 0.55;
+    pmrem.dispose();
+    room.traverse((object) => { if (object instanceof THREE.Mesh) { object.geometry.dispose(); (object.material as THREE.Material).dispose(); } });
+  }
 
-    // Individual key caps, legends, key travel and a recessed keyboard tray.
-    const keyboard = new THREE.Group(); keyboard.position.set(-1.3, 0.0, 2.17); keyboard.rotation.x = 0.07; this.scene.add(keyboard);
-    box(keyboard, [4.65, 0.26, 1.66], [0, 0.24, 0], plastic, 0.12);
-    box(keyboard, [4.28, 0.04, 1.21], [0, 0.385, -0.08], darkPlastic, 0.05);
-    const keys = ["1 2 3 4 5 6 7 8 9 0 ß ←", "Q W E R T Z U I O P Ü +", "A S D F G H J K L Ö Ä ↵", "⇧ Y X C V B N M , . - ⇧"];
-    const keyMat = new THREE.MeshStandardMaterial({ color: 0xd1c8b1, roughness: 0.48, bumpMap: grain, bumpScale: 0.002 });
-    const modifierMat = keyMat.clone(); modifierMat.color.set(0x999884);
-    keys.forEach((row, r) => row.split(" ").forEach((key, c) => {
-      const x = -1.96 + c * 0.27 + (r === 1 ? 0.05 : r === 2 ? 0.1 : 0), z = -0.52 + r * 0.25;
-      const cap = box(keyboard, [0.265, 0.13, 0.217], [x, 0.46, z], ["←", "↵", "⇧"].includes(key) ? modifierMat : keyMat, 0.025);
-      const legend = label(cap, key, 0.16, 0.12, [0, 0.07, 0], "#414337"); legend.rotation.x = -Math.PI / 2;
-      const name = key === "←" ? "Backspace" : key === "↵" ? "Enter" : key === "⇧" ? "Shift" : key;
-      this.interactive(cap, `key:${name}`, key); this.pressedKeys.set(name.toLowerCase(), cap);
-    }));
-    const space = box(keyboard, [1.83, 0.14, 0.21], [-0.15, 0.46, 0.5], keyMat, 0.02); this.interactive(space, "key: ", "Leertaste"); this.pressedKeys.set(" ", space);
-    for (const [x, name] of [[-1.9, "Home"], [-1.5, "*"], [1.05, "#"], [1.47, "Enter"], [1.88, "Escape"]] as const) {
-      const cap = box(keyboard, [0.34, 0.13, 0.21], [x, 0.46, 0.5], modifierMat, 0.02);
-      const legend = label(cap, name === "Home" ? "H" : name === "Escape" ? "Esc" : name === "Enter" ? "↵" : name, 0.24, 0.1, [0, 0.07, 0]); legend.rotation.x = -Math.PI / 2;
-      this.interactive(cap, `key:${name}`, name); this.pressedKeys.set(name.toLowerCase(), cap);
-    }
-    const numpad = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ".", "Enter"];
-    numpad.forEach((key, i) => {
-      const cap = box(keyboard, [0.22, 0.13, 0.217], [1.43 + (i % 3) * 0.25, 0.46, -0.52 + Math.floor(i / 3) * 0.25], keyMat, 0.023);
-      const legend = label(cap, key === "Enter" ? "↵" : key, 0.15, 0.1, [0, 0.07, 0]); legend.rotation.x = -Math.PI / 2;
-      this.interactive(cap, `key:${key}`, key);
-    });
-    tube(this.scene, [V(-3.5, 0.16, 1.85), V(-4, 0.13, 1.2), V(-3.8, 0.14, -0.9), V(-2.7, 0.26, -1.5)], 0.035, rubber);
-
-    // Fern-green rotary telephone, raised dial plate and recessed finger holes.
-    this.phone.position.set(2.35, 0, -0.32); this.phone.rotation.y = -0.14; this.scene.add(this.phone);
-    box(this.phone, [1.85, 0.15, 1.52], [0, 0.14, 0], darkPlastic, 0.08);
-    const phoneProfile = new THREE.Shape();
-    phoneProfile.moveTo(-0.7, 0.17); phoneProfile.lineTo(0.65, 0.17);
-    phoneProfile.quadraticCurveTo(0.73, 0.2, 0.69, 0.5);
-    phoneProfile.quadraticCurveTo(0.6, 0.76, 0.39, 0.75);
-    phoneProfile.lineTo(-0.5, 0.46); phoneProfile.quadraticCurveTo(-0.72, 0.4, -0.7, 0.17);
-    const housing = new THREE.Mesh(new THREE.ExtrudeGeometry(phoneProfile, { depth: 1.62, bevelEnabled: true, bevelSize: 0.09, bevelThickness: 0.09, bevelSegments: 5, curveSegments: 24 }), green);
-    housing.rotation.y = Math.PI / 2; housing.position.x = -0.81; housing.castShadow = true; housing.receiveShadow = true; this.phone.add(housing);
-    for (const x of [-0.66, 0.66]) {
-      box(this.phone, [0.19, 0.42, 0.24], [x, 0.95, -0.37], green, 0.06);
-      cylinder(this.phone, 0.045, 0.045, 0.14, [x, 1.2, -0.37], chrome);
-    }
-    this.dial.position.set(0, 0.67, 0.24); this.dial.rotation.x = 0.35; this.phone.add(this.dial);
-    cylinder(this.dial, 0.52, 0.55, 0.05, [0, 0, 0], chrome);
-    cylinder(this.dial, 0.48, 0.48, 0.06, [0, 0.035, 0], darkPlastic);
-    const dialFace = cylinder(this.dial, 0.42, 0.42, 0.065, [0, 0.071, 0], brass);
-    this.interactive(dialFace, "dial", "01910 wählen");
-    cylinder(this.dial, 0.21, 0.21, 0.07, [0, 0.085, 0], green);
-    const number = label(this.dial, "01910", 0.29, 0.095, [0, 0.125, 0], "#2d3628", "#ddd6b8"); number.rotation.x = -Math.PI / 2;
-    for (let i = 0; i < 10; i++) {
-      const angle = -0.65 + i * 0.51, x = Math.sin(angle) * 0.33, z = Math.cos(angle) * 0.33;
-      const hole = cylinder(this.dial, 0.067, 0.064, 0.009, [x, 0.109, z], rubber, 24); this.interactive(hole, "dial", "Wählscheibe drehen");
-      const n = label(this.dial, String((i + 1) % 10), 0.08, 0.075, [Math.sin(angle) * 0.472, 0.071, Math.cos(angle) * 0.472], "#e7e1c5"); n.rotation.x = -Math.PI / 2;
-    }
-    box(this.dial, [0.07, 0.07, 0.16], [0.43, 0.14, 0.23], chrome, 0.014);
-    this.receiver.position.copy(this.handRest); this.scene.add(this.receiver);
-    tube(this.receiver, [V(-0.78, 0.11, 0), V(-0.48, 0.31, 0), V(0, 0.33, 0), V(0.48, 0.31, 0), V(0.78, 0.11, 0)], 0.115, green);
-    for (const x of [-0.79, 0.79]) {
-      const points = [new THREE.Vector2(0, 0), new THREE.Vector2(0.27, 0), new THREE.Vector2(0.29, 0.03), new THREE.Vector2(0.285, 0.11), new THREE.Vector2(0.25, 0.22), new THREE.Vector2(0.17, 0.29), new THREE.Vector2(0.06, 0.31), new THREE.Vector2(0, 0.31)];
-      const ear = new THREE.Mesh(new THREE.LatheGeometry(points, 48), green); ear.position.set(x, 0, 0); ear.castShadow = true; this.receiver.add(ear);
-      cylinder(this.receiver, 0.273, 0.265, 0.025, [x, 0.018, 0], darkPlastic);
-    }
-    this.interactive(this.receiver, "receiver", "Hörer abheben / einsetzen");
-    const coils: THREE.Vector3[] = [];
-    for (let i = 0; i <= 600; i++) {
-      const t = i / 600, angle = t * Math.PI * 2 * 30;
-      coils.push(V(1.22 + 0.1 * Math.cos(angle) - 0.35 * Math.sin(t * Math.PI), 0.16 + 0.09 * Math.sin(angle), -0.35 + t * 2.15));
-    }
-    tube(this.scene, coils, 0.024, rubber, 700);
-    this.handsetCable = tube(this.scene, [V(1.22, 0.16, -0.35), V(1.04, 0.35, -0.46), V(1.5, 1.38, -0.38)], 0.027, rubber);
-
-    this.coupler.position.set(2.35, 0, 1.43); this.scene.add(this.coupler);
-    box(this.coupler, [2.11, 0.31, 0.88], [0, 0.26, 0], darkPlastic, 0.075);
-    for (const x of [-0.78, 0.78]) {
-      cylinder(this.coupler, 0.33, 0.34, 0.17, [x, 0.49, 0], rubber);
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.285, 0.066, 12, 48), rubber); ring.rotation.x = Math.PI / 2; ring.position.set(x, 0.62, 0); this.coupler.add(ring);
-      cylinder(this.coupler, 0.235, 0.235, 0.02, [x, 0.58, 0], darkPlastic);
-    }
-    this.interactive(this.coupler, "receiver", "Hörer in den Akustikkoppler legen");
-    label(this.coupler, "AKUSTIKKOPPLER", 1.06, 0.075, [-0.21, 0.29, 0.449], "#c6c9b6");
-    box(this.coupler, [0.032, 0.032, 0.015], [0.54, 0.29, 0.452], this.receiveLed, 0.005);
-    const speed = box(this.coupler, [0.2, 0.095, 0.04], [0.82, 0.29, 0.46], rubber, 0.01); this.interactive(speed, "speed", "Übertragungsrate ändern");
-    tube(this.scene, [V(3.42, 0.3, 1.45), V(4, 0.2, 1.25), V(4.2, 0.1, -0.8), V(3.7, 0.2, -2.4)], 0.03, rubber);
-    this.directModem.position.set(2.35, 0.17, 1.43); this.directModem.visible = false; this.scene.add(this.directModem);
-    box(this.directModem, [2.1, 0.3, 1.0], [0, 0.04, 0], plastic, 0.06);
-    box(this.directModem, [1.99, 0.19, 0.04], [0, 0.035, 0.51], darkPlastic, 0.01);
-    label(this.directModem, "DIREKTMODEM", 0.72, 0.075, [-0.48, 0.045, 0.535], "#c5c6ad");
-    for (let i = 0; i < 5; i++) box(this.directModem, [0.03, 0.03, 0.02], [0.16 + i * 0.15, 0.04, 0.541], i === 2 ? this.receiveLed : this.powerLed, 0.004);
-    this.interactive(this.directModem, "speed", "Modemprofil wählen");
-
-    // Brass desk lamp with a warm, emissive inner shade.
-    const lamp = new THREE.Group(); lamp.position.set(-5.25, 0, 0.5); this.scene.add(lamp);
-    cylinder(lamp, 0.56, 0.65, 0.13, [0, 0.1, 0], brass);
-    cylinder(lamp, 0.34, 0.48, 0.13, [0, 0.22, 0], brass);
-    cylinder(lamp, 0.065, 0.095, 2.72, [0, 1.55, 0], brass);
-    tube(lamp, [V(0, 2.86, 0), V(0.05, 3.45, 0), V(0.7, 3.6, 0), V(0.83, 3.4, 0)], 0.058, brass);
-    const shade = new THREE.Group(); shade.position.set(0.83, 3.25, 0); shade.rotation.z = -0.12; lamp.add(shade);
-    const lathe = [new THREE.Vector2(0.18, 0.43), new THREE.Vector2(0.25, 0.4), new THREE.Vector2(0.34, 0.29), new THREE.Vector2(0.5, 0.12), new THREE.Vector2(0.66, -0.06), new THREE.Vector2(0.67, -0.11)];
-    const shadeMaterial = brass.clone(); shadeMaterial.side = THREE.DoubleSide;
-    this.lampShade = new THREE.Mesh(new THREE.LatheGeometry(lathe, 64), shadeMaterial); this.lampShade.castShadow = true; shade.add(this.lampShade);
-    cylinder(shade, 0.61, 0.61, 0.018, [0, -0.09, 0], this.lampBulb);
-    this.lamp.position.set(-4.42, 3.05, 0.5); this.scene.add(this.lamp);
-    this.interactive(lamp, "lamp", "Schreibtischlampe schalten");
-    tube(this.scene, [V(-4.65, 0.1, -0.9), V(-4.4, 0.1, -2.2), V(-5.3, 0.1, -3.8)], 0.025, rubber);
-
-    // Paper note with useful page shortcuts; the text is drawn into a small decal.
-    const note = new THREE.Group(); note.position.set(-4.0, 0.025, 2.25); note.rotation.y = -0.23; this.scene.add(note);
-    box(note, [1.22, 0.012, 1.51], [0, 0, 0], new THREE.MeshStandardMaterial({ color: 0xd9c694, roughness: 0.97 }), 0.005);
-    const noteCanvas = document.createElement("canvas"); noteCanvas.width = 512; noteCanvas.height = 640;
-    const ctx = noteCanvas.getContext("2d")!;
-    ctx.fillStyle = "#d9c99e"; ctx.fillRect(0, 0, 512, 640);
-    ctx.strokeStyle = "#b4b395"; ctx.lineWidth = 1;
-    for (let y = 80; y < 640; y += 46) { ctx.beginPath(); ctx.moveTo(24, y); ctx.lineTo(490, y); ctx.stroke(); }
-    ctx.fillStyle = "#3d4948"; ctx.font = "italic 32px Georgia";
-    ["Nicht vergessen:", "", "000  Startseite", "800  Seitenfinder", "", "* S  →  Suche", "# H  →  Start", "", "Erst den Hörer", "einlegen!"].forEach((line, i) => ctx.fillText(line, 35, 72 + i * 46));
-    const noteTexture = new THREE.CanvasTexture(noteCanvas); noteTexture.colorSpace = THREE.SRGBColorSpace;
-    const paper = new THREE.Mesh(new THREE.PlaneGeometry(1.19, 1.48), new THREE.MeshStandardMaterial({ map: noteTexture, roughness: 1 })); paper.rotation.x = -Math.PI / 2; paper.position.y = 0.01; note.add(paper);
-    this.interactive(paper, "screen", "Platz nehmen");
-    const pen = cylinder(note, 0.035, 0.035, 1.18, [0.24, 0.06, 0.54], darkPlastic, 24); pen.rotation.z = Math.PI / 2; pen.rotation.y = -0.22;
-    const clip = box(pen, [0.018, 0.33, 0.015], [0.035, 0.3, 0], brass, 0.004); void clip;
-
-    // A small book stack gives the desk some lived-in detail.
-    for (let i = 0; i < 2; i++) {
-      const book = new THREE.Group(); book.position.set(-4.85, 0.18 + i * 0.32, 0.8); book.rotation.y = i * 0.08; this.scene.add(book);
-      const cover = new THREE.MeshStandardMaterial({ color: i ? 0x514b31 : 0x423326, roughness: 0.83 });
-      box(book, [1.22, 0.28, 1.2], [0, 0, 0], cover, 0.02);
-      box(book, [1.15, 0.21, 1.14], [0.01, 0, -0.01], new THREE.MeshStandardMaterial({ color: 0xc5bfa2, roughness: 1 }), 0.007);
-      box(book, [1.22, 0.28, 0.05], [0, 0, 0.595], cover, 0.015);
-      label(book, i ? "WELTATLAS" : "LEXIKON", 0.85, 0.12, [0, 0, 0.625], "#bda775", undefined, "serif");
-    }
-
+  /** Requests a frame; never re-queues one that is already pending (that would starve the loop). */
+  private kick() {
+    this.dirty = true;
+    if (this.stopped || document.hidden || this.scheduled) return;
+    this.scheduled = true;
+    this.frame = requestAnimationFrame(this.render);
   }
 
   setConnection(state: ConnectionState) {
-    this.dirty = true;
     this.connection = state;
-    this.targetReceiver.copy(state === "idle" || state === "off" ? this.handRest : state === "online" || state === "coupling" ? (this.acoustic ? this.handCoupled : this.handRest) : this.handRaised);
-    this.powerLed.emissiveIntensity = state === "off" ? 0 : 1.8;
-    this.screenLight.intensity = state === "off" ? 0 : 2.5;
+    this.keyboard.onlineLed.emissiveIntensity = state === "online" ? 2.2 : 0;
+    this.kick();
   }
+
   setSpeed(speed: ModemSpeed) {
+    this.speed = speed;
     this.acoustic = speed === 300 || speed === 1200;
-    this.coupler.visible = this.acoustic; this.directModem.visible = !this.acoustic;
-    this.setConnection(this.connection);
+    this.coupler.group.visible = this.acoustic;
+    this.modem.group.visible = !this.acoustic && speed !== "LINE";
+    this.coupler.slider.position.z = speed === 300 ? 0 : 0.1;
+    this.shadowsDirty = true;
+    this.kick();
   }
-  setTransfer(active: boolean) { this.transferring = active; this.dirty = true; }
-  setLamp(enabled: boolean) { this.lamp.intensity = enabled ? 28 : 0; this.lampBulb.emissiveIntensity = enabled ? 2.5 : 0; this.dirty = true; }
+
+  setTransfer(active: boolean) { this.transferring = active; this.kick(); }
+  /** Flickers the data LED briefly, e.g. for a keystroke on the back channel. */
+  blink(milliseconds = 180) { this.blinkUntil = performance.now() + milliseconds; this.kick(); }
+
+  setLamp(on: boolean) {
+    this.lampOn = on;
+    this.lampLight.intensity = on ? 70 : 0;
+    this.bulbLight.intensity = on ? 2.2 : 0;
+    this.lamp.bulbMaterial.emissiveIntensity = on ? 6 : 0;
+    this.backdrop.color.set(on ? 0xffffff : 0x27304a);
+    this.buildEnvironment();
+    this.shadowsDirty = true;
+    this.kick();
+  }
+
+  setPower(on: boolean, instant = false) {
+    this.powered = on;
+    this.monitor.tube.setPower(on, performance.now(), instant || this.reduced.matches);
+    this.monitor.powerLed.emissiveIntensity = on ? 2.4 : 0;
+    this.monitor.power.rotation.x = on ? -0.12 : 0.12;
+    this.kick();
+  }
+
+  setBrightness(value: number) { this.monitor.tube.setBrightness(value); this.kick(); }
+  setEffect(value: number) { this.monitor.tube.setEffect(value); this.kick(); }
+  afterglow() { if (!this.reduced.matches) this.monitor.tube.afterglow(performance.now()); this.kick(); }
   focus(value: boolean) { this.focused = value; this.resize(); }
-  key(key: string) {
-    const mesh = this.pressedKeys.get(key.toLowerCase());
-    if (!mesh) return;
-    this.dirty = true;
-    mesh.position.y = 0.417;
-    setTimeout(() => { mesh.position.y = 0.46; this.dirty = true; }, 100);
+
+  dial(plan: DialPlan) {
+    this.dialPlan = { plan, start: performance.now() };
+    this.kick();
   }
+
+  press(key: string, code?: string, down = true) {
+    const name = key.length === 1 ? key.toLowerCase() : key;
+    const matches = this.keyboard.keys.filter((entry) => entry.key.toLowerCase() === name.toLowerCase());
+    const entry = matches.find((candidate) => code && candidate.code === code) ?? matches.find((candidate) => !candidate.code?.startsWith("Numpad")) ?? matches[0];
+    if (!entry) return;
+    if (down) this.pressed.set(entry, performance.now());
+    else this.pressed.delete(entry);
+    entry.group.position.y = entry.rest - (down ? 0.034 : 0);
+    this.shadowsDirty = true;
+    this.kick();
+  }
+
+  /** Clicks on the virtual keyboard press and release a key. */
+  tap(key: string) {
+    this.press(key, undefined, true);
+    window.setTimeout(() => this.press(key, undefined, false), 110);
+  }
+
+  private pose(target: HandsetPlace) {
+    if (target === "cradle") {
+      return { position: this.phone.group.localToWorld(CRADLE.position.clone()), quaternion: this.phone.group.quaternion.clone() };
+    }
+    if (target === "coupler") {
+      return { position: this.coupler.group.localToWorld(SEATED.clone()), quaternion: this.coupler.group.quaternion.clone() };
+    }
+    // At the listener's right ear, just outside the frame: earpiece up, capsule facing the head.
+    const right = V(1, 0, 0).applyQuaternion(this.camera.quaternion);
+    const up = V(0, 1, 0).applyQuaternion(this.camera.quaternion);
+    const forward = V(0, 0, -1).applyQuaternion(this.camera.quaternion);
+    const position = this.camera.position.clone().addScaledVector(right, 1.5).addScaledVector(forward, 1.1).addScaledVector(up, -0.35);
+    // Handset x runs mouthpiece → earpiece (up); its capsules face along -y, towards the head.
+    const quaternion = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(up, right, forward));
+    return { position, quaternion };
+  }
+
+  private applyHandset(target: HandsetPlace) {
+    const { position, quaternion } = this.pose(target);
+    this.handset.position.copy(position);
+    this.handset.quaternion.copy(quaternion);
+    this.afterHandsetMove();
+  }
+
+  moveHandset(target: HandsetPlace, instant = false): Promise<void> {
+    this.tween?.resolve();
+    this.tween = undefined;
+    const from = this.handsetPlace;
+    this.handsetPlace = target;
+    if (instant || this.reduced.matches) { this.applyHandset(target); this.kick(); return Promise.resolve(); }
+    return new Promise((resolve) => {
+      const far = from === "ear" || target === "ear";
+      this.tween = {
+        from: this.handset.position.clone(), fromQuaternion: this.handset.quaternion.clone(), to: target,
+        start: performance.now(), duration: far ? 1050 : 900, lift: far ? 0.5 : 1.0, resolve,
+      };
+      this.kick();
+    });
+  }
+
+  private updateHandset(now: number) {
+    const tween = this.tween;
+    if (!tween) {
+      if (this.handsetPlace !== "ear") return false;
+      const { position, quaternion } = this.pose("ear");
+      if (position.distanceToSquared(this.handset.position) < 1e-8) return false;
+      this.handset.position.copy(position); this.handset.quaternion.copy(quaternion);
+      this.afterHandsetMove();
+      return true;
+    }
+    const k = Math.min(1, (now - tween.start) / tween.duration);
+    const e = easeInOut(k);
+    const target = this.pose(tween.to);
+    const up = V(0, tween.lift, 0);
+    const p1 = tween.from.clone().add(up), p2 = target.position.clone().add(up.multiplyScalar(0.7));
+    const s = 1 - e;
+    this.handset.position.set(0, 0, 0)
+      .addScaledVector(tween.from, s * s * s).addScaledVector(p1, 3 * s * s * e)
+      .addScaledVector(p2, 3 * s * e * e).addScaledVector(target.position, e * e * e);
+    // Rubber cups give a little as the handset settles.
+    if (tween.to === "coupler" && k > 0.86) this.handset.position.y -= Math.sin(((k - 0.86) / 0.14) * Math.PI) * 0.03;
+    this.handset.quaternion.slerpQuaternions(tween.fromQuaternion, target.quaternion, THREE.MathUtils.smoothstep(k, 0.08, 0.85));
+    this.afterHandsetMove();
+    if (k >= 1) { this.tween = undefined; tween.resolve(); }
+    return true;
+  }
+
+  private afterHandsetMove() {
+    this.handset.updateMatrixWorld(true);
+    const start = this.handset.localToWorld(HANDSET_CORD.clone());
+    const startOut = V(-1, -0.8, 0).applyQuaternion(this.handset.quaternion).normalize();
+    const end = this.phone.group.localToWorld(CORD_JACK.clone());
+    const endOut = V(-1, -0.4, 0.3).applyQuaternion(this.phone.group.quaternion).normalize();
+    this.cord.update(start, startOut, end, endOut);
+    const resting = this.handsetPlace === "cradle" && !this.tween;
+    for (const plunger of this.phone.plungers) plunger.position.y = resting ? PLUNGER_Y.rest : PLUNGER_Y.raised;
+    this.shadowsDirty = true;
+  }
+
+  private updateDial(now: number) {
+    if (!this.dialPlan) return false;
+    const t = (now - this.dialPlan.start) / 1000;
+    this.phone.wheel.rotation.y = -dialRotation(this.dialPlan.plan, t);
+    if (t > this.dialPlan.plan.duration) { this.dialPlan = undefined; this.phone.wheel.rotation.y = 0; }
+    this.shadowsDirty = true;
+    return true;
+  }
+
+  private updateLeds(now: number) {
+    const online = this.connection === "online";
+    const carrier = online || this.connection === "coupling";
+    const active = (this.transferring && online) || now < this.blinkUntil;
+    const flicker = active && !this.reduced.matches ? (Math.sin(now * 0.047) + Math.sin(now * 0.113) > 0 ? 3.2 : 0.3) : 0;
+    this.coupler.leds.power.emissiveIntensity = this.powered ? 2 : 0;
+    this.coupler.leds.carrier.emissiveIntensity = carrier && this.handsetPlace === "coupler" ? 2.4 : 0;
+    this.coupler.leds.data.emissiveIntensity = flicker;
+    const lit = [this.speed === 9600, false, carrier, ["dialing", "answering", "coupling", "online"].includes(this.connection), flicker > 1, now < this.blinkUntil, this.powered, true];
+    this.modem.leds.forEach((led, index) => { led.emissiveIntensity = lit[index] ? 2.4 : 0; });
+    return active;
+  }
+
+  /** Development aid: pin the camera to inspect a device up close. */
+  inspect(position?: [number, number, number], target?: [number, number, number]) {
+    this.inspection = position && target ? { position: V(...position), target: V(...target) } : undefined;
+    this.kick();
+  }
+  private inspection?: { position: THREE.Vector3; target: THREE.Vector3 };
+
+  private updateCamera(dt: number) {
+    if (this.inspection) {
+      this.camera.position.copy(this.inspection.position);
+      this.lookAt.copy(this.inspection.target);
+      this.camera.lookAt(this.lookAt);
+      this.camera.updateMatrixWorld();
+      return false;
+    }
+    const tanHalf = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    const aspect = this.camera.aspect;
+    let target: THREE.Vector3, position: THREE.Vector3;
+    if (this.focused) {
+      target = this.screenWorld.clone().add(V(0, 0.02, 0));
+      const distance = Math.max(1.45 / tanHalf, 1.72 / (tanHalf * aspect));
+      position = target.clone().add(V(0, 0.08, distance));
+    } else {
+      target = DESK_TARGET.clone();
+      const distance = Math.max(3.3 / tanHalf, 6.5 / (tanHalf * aspect));
+      position = target.clone().add(V(0.3 + this.parallax.x * 0.28, distance * 0.21 - this.parallax.y * 0.12, distance));
+    }
+    const smoothing = this.reduced.matches ? 1 : 1 - Math.exp(-dt * 4.2);
+    const moving = this.camera.position.distanceToSquared(position) > 1e-6 || this.lookAt.distanceToSquared(target) > 1e-6;
+    if (moving) { this.camera.position.lerp(position, smoothing); this.lookAt.lerp(target, smoothing); }
+    else { this.camera.position.copy(position); this.lookAt.copy(target); }
+    this.camera.lookAt(this.lookAt);
+    this.camera.updateMatrixWorld();
+    return moving;
+  }
+
+  private softwareRenderer() {
+    const gl = this.renderer.getContext();
+    const info = gl.getExtension("WEBGL_debug_renderer_info");
+    const name = String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    return /swiftshader|llvmpipe|softpipe|software|basic render/i.test(name);
+  }
+
+  /** Trades resolution and effects for frame rate; the scene, screen and sound stay identical. */
+  private setQuality(level: number) {
+    this.quality = level;
+    const tier = QUALITY[level];
+    const ratio = Math.min(devicePixelRatio, tier.ratio);
+    this.renderer.setPixelRatio(ratio);
+    this.composer.setPixelRatio(ratio);
+    for (const target of [this.composer.renderTarget1, this.composer.renderTarget2]) { target.samples = tier.samples; target.dispose(); }
+    this.bloom.enabled = tier.bloom;
+    this.lampLight.shadow.mapSize.set(tier.shadow, tier.shadow);
+    this.lampLight.shadow.map?.dispose();
+    this.lampLight.shadow.map = null;
+    Object.assign(this.m.acrylic, { transmission: tier.transmission ? 0.92 : 0, transparent: !tier.transmission, opacity: tier.transmission ? 1 : 0.32 });
+    this.m.acrylic.needsUpdate = true;
+    this.shadowsDirty = true;
+    this.frameTimes = [];
+    this.settleFrames = 20;
+    this.resize();
+  }
+
+  /** Steps quality down when the median frame time stays above ~24 fps. */
+  private measure(interval: number) {
+    if (this.settleFrames > 0) { this.settleFrames--; return; }
+    this.frameTimes.push(interval);
+    if (this.frameTimes.length < 30) return;
+    const median = [...this.frameTimes].sort((a, b) => a - b)[15];
+    this.frameTimes = [];
+    if (median > 42 && this.quality > 0) this.setQuality(this.quality - 1);
+  }
+
   private resize() {
     const { width, height } = this.stage.getBoundingClientRect();
-    this.renderer.setSize(width, height); this.composer.setSize(width, height); this.ao.enabled = width > 720; this.dirty = true; this.css.setSize(width, height); this.camera.aspect = width / height; this.camera.updateProjectionMatrix();
+    if (!width || !height) return;
+    this.renderer.setSize(width, height);
+    this.composer.setSize(width, height);
+    this.css.setSize(width, height);
+    this.ao.enabled = QUALITY[this.quality].ao && width > 720;
+    this.bloom.resolution.set(width / 2, height / 2);
+    const ratio = this.renderer.getPixelRatio();
+    (this.grade.uniforms.uResolution.value as THREE.Vector2).set(width * ratio, height * ratio);
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.kick();
   }
-  private render = (time: number) => {
+
+  private render = (now: number) => {
+    this.scheduled = false;
     if (this.stopped) return;
-    if (time - this.lastRenderTime < 30) { this.frame = requestAnimationFrame(this.render); return; }
-    this.lastRenderTime = time;
-    const dt = Math.min((time - this.previousTime) / 1000 || 0.016, 0.5); this.previousTime = time;
-    const focus = this.focused;
-    const target = focus ? V(-1.35, 2.52, 0.9) : this.cameraTarget;
-    // Fit the whole screen on phones and the entire desk on narrow desktops.
-    const distance = focus ? Math.max(4.95, 2.0 / (this.camera.aspect * Math.tan(THREE.MathUtils.degToRad(18.5)))) : Math.max(10.8, 5.0 / (this.camera.aspect * Math.tan(THREE.MathUtils.degToRad(18.5))));
-    const cameraPosition = focus ? V(-1.35, 2.64, 0.99 + distance) : V(-0.05 + this.lastPointer.x * 0.14, 4.9 - this.lastPointer.y * 0.08, distance);
-    const smoothing = this.reduced.matches ? 1 : 1 - Math.exp(-dt * 4.8);
-    const cameraMoving = this.camera.position.distanceToSquared(cameraPosition) > 0.000001 || this.lookAt.distanceToSquared(target) > 0.000001;
-    if (cameraMoving) { this.camera.position.lerp(cameraPosition, smoothing); this.lookAt.lerp(target, smoothing); }
-    else { this.camera.position.copy(cameraPosition); this.lookAt.copy(target); }
-    this.camera.lookAt(this.lookAt);
-    const receiverMoving = this.receiver.position.distanceToSquared(this.targetReceiver) > 0.00001;
-    this.receiver.position.lerp(this.targetReceiver, this.reduced.matches ? 1 : 1 - Math.exp(-dt * 5));
-    if (receiverMoving && this.handsetCable) {
-      const end = this.receiver.position.clone().add(V(-0.94, 0.16, 0));
-      this.handsetCable.geometry.dispose();
-      this.handsetCable.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V(1.22, 0.16, -0.35), V(1.01, 0.4, 0.1), end.clone().add(V(-0.22, -0.35, 0.05)), end]), 48, 0.027, 8, false);
+    const interval = now - this.previousTime;
+    // Allow large steps so slow machines still settle the camera in a few frames.
+    const dt = Math.min(0.25, interval / 1000 || 0.016);
+    this.previousTime = now;
+    let active = this.dirty;
+    active = this.updateCamera(dt) || active;
+    active = this.updateHandset(now) || active;
+    active = this.updateDial(now) || active;
+    active = this.monitor.tube.update(now) || active;
+    active = this.updateLeds(now) || active;
+    if (this.pressed.size) for (const [key, since] of this.pressed) if (now - since > 1500) { this.pressed.delete(key); key.group.position.y = key.rest; active = true; }
+    // Keep ticking while a caret blinks or the page is being received.
+    const waiting = this.raster.hasCaret || this.transferring || this.tween !== undefined || this.handsetPlace === "ear";
+    if (active) {
+      this.dirty = false;
+      this.screenLight.intensity = 3.2 * this.monitor.tube.emission;
+      if (this.shadowsDirty) { this.renderer.shadowMap.needsUpdate = true; this.shadowsDirty = false; }
+      this.composer.render();
+      this.css.render(this.htmlScene, this.camera);
+      if (this.renderedPrevious) this.measure(interval);
     }
-    this.receiver.rotation.z = this.connection === "paused" || this.connection === "lifting" ? Math.sin(time * 0.001) * 0.04 : 0;
-    if (this.connection === "dialing" && !this.reduced.matches) this.dial.rotation.y = -Math.abs(Math.sin(time * 0.0024)) * 1.9;
-    else this.dial.rotation.y *= 0.88;
-    this.receiveLed.emissiveIntensity = this.transferring && !this.reduced.matches ? (Math.sin(time * 0.025) > 0 ? 3 : 0.2) : this.connection === "online" ? 0.7 : 0;
-    if (this.dirty || cameraMoving || receiverMoving || this.connection === "dialing" || this.transferring) {
-      if (receiverMoving || this.dirty) this.renderer.shadowMap.needsUpdate = true;
-      this.composer.render(); this.css.render(this.htmlScene, this.camera); this.dirty = false;
-    }
-    this.frame = requestAnimationFrame(this.render);
+    this.renderedPrevious = active;
+    if ((active || waiting) && !this.scheduled) { this.scheduled = true; this.frame = requestAnimationFrame(this.render); }
   };
+
   private pick(event: PointerEvent) {
     const rect = this.stage.getBoundingClientRect();
-    this.pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
+    this.pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(this.pointer, this.camera);
-    const hits = this.raycaster.intersectObjects(this.clicks, true);
-    for (const hit of hits) {
-      let object: THREE.Object3D | null = hit.object, action: THREE.Object3D | undefined;
-      let visible = true;
-      while (object) { if (!object.visible) visible = false; if (object.userData.action) action = object; object = object.parent; }
+    for (const hit of this.raycaster.intersectObjects(this.clicks, true)) {
+      let visible = true, action: THREE.Object3D | undefined;
+      for (let object: THREE.Object3D | null = hit.object; object; object = object.parent) {
+        if (!object.visible) visible = false;
+        if (!action && object.userData.action) action = object;
+      }
       if (visible && action) return action;
     }
     return undefined;
   }
+
   private pointerMove = (event: PointerEvent) => {
-    if ((event.target as HTMLElement).closest(".btx-screen")) return;
-    this.hovered = this.pick(event); this.lastPointer.copy(this.pointer);
+    if ((event.target as HTMLElement).closest(".btx-screen")) { this.tooltip.textContent = ""; return; }
+    this.hovered = this.pick(event);
+    this.parallax.copy(this.pointer);
     this.stage.style.cursor = this.hovered ? "pointer" : "default";
     this.tooltip.textContent = this.hovered?.userData.title ?? "";
-    this.tooltip.style.left = `${Math.min(event.clientX + 16, innerWidth - 220)}px`; this.tooltip.style.top = `${event.clientY - 35}px`;
+    this.tooltip.style.left = `${Math.min(event.clientX + 16, innerWidth - 240)}px`;
+    this.tooltip.style.top = `${event.clientY - 36}px`;
+    if (!this.focused && !this.reduced.matches) this.kick();
   };
-  private down = { x: 0, y: 0 };
   private pointerDown = (event: PointerEvent) => { this.down = { x: event.clientX, y: event.clientY }; };
   private pointerUp = (event: PointerEvent) => {
     if ((event.target as HTMLElement).closest(".btx-screen") || Math.hypot(event.clientX - this.down.x, event.clientY - this.down.y) > 8) return;
-    const object = this.pick(event); if (object) this.onAction(object.userData.action as DeskAction);
+    const object = this.pick(event);
+    if (object) this.onAction(object.userData.action as DeskAction);
   };
-  private pointerLeave = () => { this.tooltip.textContent = ""; this.lastPointer.set(0, 0); };
+  private pointerLeave = () => { this.tooltip.textContent = ""; this.parallax.set(0, 0); this.kick(); };
   private contextLost = (event: Event) => { event.preventDefault(); this.stage.dispatchEvent(new Event("desk:unavailable")); };
+
   dispose() {
-    this.stopped = true; cancelAnimationFrame(this.frame); this.resizeObserver.disconnect();
+    this.stopped = true;
+    cancelAnimationFrame(this.frame);
+    this.tween?.resolve();
+    this.resizeObserver.disconnect();
     document.removeEventListener("visibilitychange", this.handleVisibility);
-    this.stage.removeEventListener("pointermove", this.pointerMove); this.stage.removeEventListener("pointerdown", this.pointerDown); this.stage.removeEventListener("pointerup", this.pointerUp); this.stage.removeEventListener("pointerleave", this.pointerLeave);
+    this.stage.removeEventListener("pointermove", this.pointerMove);
+    this.stage.removeEventListener("pointerdown", this.pointerDown);
+    this.stage.removeEventListener("pointerup", this.pointerUp);
+    this.stage.removeEventListener("pointerleave", this.pointerLeave);
     this.renderer.domElement.removeEventListener("webglcontextlost", this.contextLost);
+    this.raster.dispose();
+    this.screenObject.element.classList.remove("crt-rendered");
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
     this.scene.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
@@ -455,9 +642,24 @@ export class DeskScene {
         for (const value of Object.values(material)) if (value instanceof THREE.Texture) textures.add(value);
       }
     });
-    geometries.forEach((g) => g.dispose()); materials.forEach((m) => m.dispose()); textures.forEach((t) => t.dispose());
-    this.composer.passes.forEach((pass) => pass.dispose()); this.composer.dispose();
-    this.environment.dispose(); this.renderer.dispose();
-    this.renderer.domElement.remove(); this.css.domElement.remove();
+    this.monitor.tube.dispose();
+    geometries.forEach((geometry) => geometry.dispose());
+    materials.forEach((material) => material.dispose());
+    textures.forEach((texture) => texture.dispose());
+    for (const texture of this.m.textures) texture.dispose();
+    this.composer.passes.forEach((pass) => pass.dispose());
+    this.composer.dispose();
+    this.environment?.dispose();
+    this.renderer.dispose();
+    this.renderer.domElement.remove();
+    this.css.domElement.remove();
   }
+}
+
+function keyTitle(key: string) {
+  const names: Record<string, string> = {
+    "*": "Initiator  *", "#": "Terminator  #", Enter: "Datenfreigabe  ↵", Backspace: "Löschen", Home: "Startseite  #H",
+    ArrowLeft: "Vorherige Seite", ArrowRight: "Nächste Seite", " ": "Leertaste", Shift: "Umschalten",
+  };
+  return names[key] ?? `Taste ${key.length === 1 ? key.toUpperCase() : key}`;
 }

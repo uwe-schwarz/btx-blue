@@ -7,9 +7,10 @@ import "@/styles/terminal.css";
   <div class="terminal-source" data-terminal-source><slot /></div>
   <div class="desk-tooltip" data-desk-tooltip aria-hidden="true"></div>
   <div class="desk-console">
+    <div class="console-plate" aria-hidden="true"><span>Btx</span> Arbeitsplatz</div>
     <div class="connection-readout" role="status" aria-live="polite" aria-atomic="true">
       <span class="connection-led" data-connection-led></span>
-      <span data-connection-status>Bereit zur Einwahl</span>
+      <span class="connection-status" data-connection-status>Bereit zur Einwahl</span>
       <span class="connection-profile" data-connection-profile>V.23 · 1200/75</span>
     </div>
     <nav class="desk-actions" aria-label="Terminal bedienen">
@@ -35,7 +36,7 @@ import "@/styles/terminal.css";
       <button type="button" data-desk-power aria-pressed="true">Terminal ausschalten</button>
       <button type="button" data-desk-flat>Ohne 3D</button>
     </div>
-    <p class="settings-footnote">V.21 und V.23: synthetisierte FSK-Signale. V.22bis und V.32: angenäherte Trainingssequenzen. Schnellere Profile verwenden das Direktmodem.</p>
+    <p class="settings-footnote">Akustikkoppler: V.21 und V.23 werden als echte FSK-Signale aus den empfangenen Seitenzeichen erzeugt (1200 bit/s hin, 75 bit/s zurück). Wahl mit 10 Impulsen/s, Wählton und Freiton 425 Hz, Antwortton 2100 Hz. V.22bis und V.32 sind angenäherte Klangbilder eines Direktmodems.</p>
   </section>
 </div>
 

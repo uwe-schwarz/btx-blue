@@ -1,11 +1,33 @@
 import { expect, test } from "@playwright/test";
 
+test("dials 01910 on the rotary dial, couples the handset and shows the call charge after hanging up", async ({ page }) => {
+  test.setTimeout(90000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/000");
+  await expect(page.locator("[data-terminal]")).toHaveAttribute("data-ready", "true", { timeout: 20000 });
+  // In 3D the phosphor is drawn by WebGL; the HTML screen stays interactive underneath.
+  await expect(page.locator(".btx-screen")).toHaveClass(/crt-rendered/);
+  await page.getByRole("button", { name: "Verbinden", exact: true }).click();
+  await expect(page.locator("[data-terminal]")).toHaveAttribute("data-connection", "lifting");
+  await expect(page.locator("[data-local-grid]")).toContainText("Wählton 425 Hz");
+  await expect(page.locator("[data-terminal]")).toHaveAttribute("data-connection", "dialing", { timeout: 5000 });
+  await expect(page.locator("[data-local-grid]")).toContainText("0 1 9 1 _", { timeout: 15000 });
+  await expect(page.locator("[data-terminal]")).toHaveAttribute("data-connection", "answering", { timeout: 15000 });
+  await expect(page.locator("[data-terminal]")).toHaveAttribute("data-connection", "coupling", { timeout: 5000 });
+  await expect(page.locator("[data-terminal]")).toHaveAttribute("data-connection", "online", { timeout: 10000 });
+  await page.getByRole("button", { name: "Auflegen" }).click();
+  await expect(page.locator("[data-terminal]")).toHaveAttribute("data-connection", "idle");
+  await expect(page.locator("[data-local-grid]")).toContainText("0,23 DM");
+  expect(errors).toEqual([]);
+});
+
 test("connects, navigates without replacing the desk, and preserves browser history", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/000");
   await expect(page.locator("[data-terminal]")).toHaveAttribute("data-ready", "true", { timeout: 20000 });
-  await page.getByRole("button", { name: "Verbinden", exact: true }).click();
+  await page.getByRole("button", { name: "Direkt verbinden" }).click();
   await expect(page.locator("[data-terminal]")).toHaveAttribute("data-connection", "online", { timeout: 15000 });
   await page.evaluate(() => { document.querySelector("canvas")!.dataset.identity = "original"; });
   await page.getByLabel("Dreistellige Seitennummer").fill("800");

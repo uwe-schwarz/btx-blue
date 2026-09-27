@@ -2,33 +2,51 @@
 
 ## Visual direction
 
-The concept is `terminal-concept.png`: a warm, late-evening 1985 workspace, walnut desk, ivory CRT and keyboard, fern-green rotary telephone, black acoustic coupler and brass desk lamp. The implementation is real Three.js geometry; the concept image is not used as a backdrop. The existing BTX pages, typography, URLs and search remain the content of the screen. The wall, framed city engraving, fern and distant window use a generated background plate behind the real geometry. There is exactly one movable receiver, correcting the duplicate receiver in the concept.
+The concept is `terminal-concept.png`: a warm, late-evening 1985 workspace in Cologne, walnut desk, ivory CRT terminal and keyboard, fern-green rotary telephone, acoustic coupler and brass desk lamp. Everything on the desk is real Three.js geometry; the concept image is not used as a backdrop. The wall, framed engraving of Cologne Cathedral, fern and night window come from a generated background plate. The existing Btx pages, URLs and search remain the content of the screen.
 
-Tokens: walnut brown, olive wall (`#4f5040`), ivory controls (`#e4d7b9`), fern-green phone (`#355137`), blue phosphor (`#03177d`), amber lamp. Desk controls use Arial; physical legends use small canvas decals; the display retains Bedstead/Unscii. UI copy remains German, consistent with the existing site.
+Period references the models follow:
+
+- **Telephone:** Deutsche Bundespost FeTAp 611 in *farngrün*. Trapezoid body, rotary *Nummernschalter* with a clear acrylic finger wheel over a number plate, the "FEUER 112 / NOTRUF 110" centre card, a chrome finger stop just past four o'clock, cradle plungers (*Gabelumschalter*) and a coiled handset cord.
+- **Acoustic coupler:** Woerltronic *dataphon s 21 d* (27 × 8.5 × 5 cm). Cream housing with a ribbed bellows between two blocks, thick black rubber cups spaced for a FeTAp handset, and LEDs for power, carrier and data. V.21 and V.23 (Btx 1200/75).
+- **Terminal:** a generic 14-inch Btx terminal with a curved PAL tube, charcoal inner mask, knurled brightness and contrast knobs and a mains rocker. The keyboard is German ISO QWERTZ with sculpted rows and a Btx block, where the blue `*` is the initiator and the red `#` the terminator.
+
+Tokens: walnut, olive wall, ivory ABS (`#d9cfb8`), farngrün (`#4a6a45`), Btx blue (`#03177d`), amber lamp and cyan VFD readout (`#7df6d8`). UI copy is German.
 
 ## Architecture
 
 - `TerminalDesk.astro`: progressive HTML shell, accessible controls and settings.
-- `TerminalExperience.ts`: connection lifecycle, preferences, audio, camera controls and fallback.
-- `DeskScene.ts`: procedural meshes, material maps, lighting, shadow/AO passes, pointer raycasting and CSS3D screen alignment.
-- `navigation.ts`: cancelable same-origin page requests; replaces the grid and metadata while preserving scene, connection and audio context. Ordinary links remain usable without JavaScript.
-- `BtxInput.ts`: existing search and keyboard navigation, now with abortable listeners and pausable character reveal.
-- `audio.ts`: Web Audio synthesis. No microphone, external service, account or network modem connection is involved.
+- `TerminalExperience.ts`: the call choreography (lift, dial, answer, couple, hang up), preferences, the terminal's local teletext screens, keyboard and back-channel keystrokes, and the flat fallback.
+- `DeskScene.ts`: renderer, lights, post-processing (GTAO, bloom, film grade), adaptive quality, camera, handset tween, dial animation, LEDs and picking. It renders only while something changes.
+- `scene/raster.ts`: paints the live 40×24 Btx DOM (reveal progress, hover, focused inputs, block cursor) into a canvas. The HTML screen stays in place over the tube, invisible but fully interactive and accessible.
+- `scene/crt.ts`: the phosphor shader on a curved faceplate. It provides Gaussian beam scanlines that fade out before they alias, limited video bandwidth, halation, afterglow between pages, EHT static and degauss swirl at switch-on, and the vertical-then-horizontal collapse to a fading dot at switch-off. A reflective glass layer sits in front.
+- `scene/monitor.ts`, `keyboard.ts`, `telephone.ts`, `coupler.ts`, `room.ts`, `cord.ts`: procedural models; `kit.ts` holds the geometry helpers and a skyline-packed decal atlas for every printed legend.
+- `lib/terminal/dial.ts`: the FeTAp dial model (wind-up, governed return, pulse times), shared by animation and sound.
+- `lib/terminal/modem.ts` + `modem-worklet.ts`: an 8N1 continuous-phase FSK transmitter running in an AudioWorklet. The page's own characters, one byte per screen cell, are modulated in step with the reveal, and each keystroke is sent on the 75 bit/s back channel.
+- `lib/terminal/audio.ts`: Web Audio graph and synthesized sounds.
+- `lib/terminal/local-screens.ts`: the decoder's own screens (idle, dialling, answer, carrier, carrier lost), including a sextant-mosaic logo and the call charge after hanging up.
 
-A camera close-up keeps the 40-column, 24-row display readable. Portrait viewports start in close-up, with an optional desk view. The HTML-only screen view is manually selectable and is also used when WebGL initialization or context availability fails. Reduced motion removes camera interpolation and character reveal. All hardware functions have HTML controls or keyboard equivalents.
+Portrait viewports start in the screen close-up. Reduced motion removes camera and handset interpolation and the character reveal. The HTML-only view is selectable and is used automatically when WebGL fails. All hardware functions have HTML controls or keyboard equivalents.
 
-The scene is loaded dynamically. Textures are local JPEGs derived from the generated PNG originals. Labels use resolution-appropriate small textures. Render work stops while idle or hidden; ambient occlusion is disabled below 721 px. Geometries, materials, textures, render targets and listeners are disposed when leaving 3D mode.
+Quality adapts to the renderer. Software rasterisers (SwiftShader, llvmpipe) start on the low tier, and a median frame time above 42 ms steps down one tier (pixel ratio, MSAA, GTAO, bloom, shadow-map size, acrylic transmission). A dev-only `window.__desk.inspect(position, target)` pins the camera for close-ups.
 
-## Audio fidelity
+## The call, second by second
 
-- V.21 receiving channel: 1650/1850 Hz FSK at 300 symbols/s.
-- V.23 receiving channel: 1300/2100 Hz FSK at 1200 symbols/s. The historical 75 bit/s reverse channel is identified in the profile; this is not a complete V.23 protocol implementation.
-- V.22bis: 600-symbol/s QAM-like signal on a 2400 Hz carrier.
-- V.32: 2400-symbol/s QAM-like signal on an 1800 Hz carrier.
+| Step | Screen | Sound |
+| --- | --- | --- |
+| Lift the handset | "Hörer abgehoben" | Cradle plungers click, the loop closes, then the continuous 425 Hz *Wählton* (post-1979 Bundespost) at the ear. |
+| Dial 0-1-9-1-0 | Digits appear as each pulse train ends | Finger-wheel ratchet on wind-up; the governor buzzes on return at 10 pulses/s. Each 60 ms loop break mutes the line and clicks in the earpiece. The dial tone stops at the first impulse. |
+| Exchange | "Vermittlung schaltet durch" | Electromechanical selector clicks. |
+| Ringing | "Freiton" | 425 Hz, 1 s on (4 s off). |
+| Answer | "Hörer jetzt in den Akustikkoppler legen" | Far-end loop click, then the 2100 Hz answer tone (V.25). |
+| Couple | "Datenträger erkannt" | Rubber thump; the tone is now muffled by the cups. The 1300 Hz V.23 carrier follows, then the coupler's 390 Hz back channel. |
+| Online | The page arrives at 120 characters/s | The page's bytes as 1300/2100 Hz FSK, about 8 dB below the dial tone. Keystrokes chirp on the 390/450 Hz back channel. |
+| Hang up | Duration, *Gebühreneinheiten* and DM | Cradle clack with the faint bell tinkle. Local call at 0,23 DM per unit, one unit per 8 min (weekdays 8–18 h) or 12 min. |
 
-The V.22bis and V.32 training sequences are explicitly labeled approximations in the UI. Generated data tones illustrate the standards; the app does not implement framing, negotiation, equalization, error correction or a CEPT modem stack. Dialing uses a 425 Hz German dial tone and 10 impulse clicks per second. Audio starts only from a user gesture and can be muted or adjusted.
+Direct-connect modems (2400/9600) dial by DTMF, hand-shake through the modem's monitor speaker and then mute it (ATM1). The CRT adds a power-rocker clunk, the degaussing hum, EHT crackle, a faint 50 Hz hum and the 15.625 kHz line-output whine. The room has a short convolution reverb; key switches have separate press and release sounds.
 
-References: [ITU V.21](https://www.itu.int/rec/T-REC-V.21/en), [ITU V.23](https://www.itu.int/rec/T-REC-V.23-198811-I/en), [ITU V.22bis](https://www.itu.int/rec/T-REC-V.22bis/en), [ITU V.32](https://www.itu.int/rec/T-REC-V.32/), [CSS3DRenderer](https://threejs.org/docs/pages/CSS3DRenderer.html).
+The V.22bis and V.32 signals are labelled approximations. The app does not implement negotiation, equalisation, error correction or a CEPT decoder. Audio starts only from a user gesture and can be muted or adjusted.
+
+References: [ITU V.21](https://www.itu.int/rec/T-REC-V.21/en), [ITU V.23](https://www.itu.int/rec/T-REC-V.23-198811-I/en), [ITU V.22bis](https://www.itu.int/rec/T-REC-V.22bis/en), [ITU V.32](https://www.itu.int/rec/T-REC-V.32/), [Wählton (de.wikipedia)](https://de.wikipedia.org/wiki/W%C3%A4hlton), [Dataphon s21d on Wikimedia Commons](https://commons.wikimedia.org/w/index.php?search=Dataphon+akustikkoppler&title=Special:MediaSearch&type=image), [FeTAp 611 on Wikimedia Commons](https://commons.wikimedia.org/w/index.php?search=FeTAp+611&title=Special:MediaSearch&type=image), [CSS3DRenderer](https://threejs.org/docs/pages/CSS3DRenderer.html).
 
 ## Generated assets
 

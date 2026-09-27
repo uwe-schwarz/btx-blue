@@ -16,11 +16,37 @@ export function parseModemSpeed(value: string | null): ModemSpeed {
 }
 
 export const CONNECTION_LABELS: Record<ConnectionState, string> = {
-  idle: "Bereit zur Einwahl", lifting: "Hörer abheben …", dialing: "Wähle 01910 …",
-  answering: "Gegenstelle antwortet …", coupling: "Träger wird erkannt …", online: "Verbindung hergestellt",
-  paused: "Träger verloren · Hörer einsetzen", off: "Terminal ausgeschaltet",
+  idle: "Bereit zur Einwahl",
+  lifting: "Hörer abgehoben · Wählton",
+  dialing: "Wähle 01910 …",
+  answering: "Btx-Zentrale antwortet …",
+  coupling: "Träger wird erkannt …",
+  online: "Verbindung hergestellt",
+  paused: "Träger verloren · Hörer einsetzen",
+  off: "Terminal ausgeschaltet",
 };
 
-export const CONNECTION_STEPS: ReadonlyArray<readonly [ConnectionState, number]> = [
-  ["lifting", 850], ["dialing", 4700], ["answering", 1800], ["coupling", 1600], ["online", 0],
-];
+export const BUSY_STATES: ReadonlySet<ConnectionState> = new Set(["lifting", "dialing", "answering", "coupling"]);
+
+/** Deutsche Bundespost, 1985: 0,23 DM per Gebühreneinheit; Btx was reached at the local rate. */
+export const UNIT_PRICE_DM = 0.23;
+
+/** Local calls cost one unit per 8 minutes on weekdays 8–18 h, otherwise one unit per 12 minutes. */
+export function tariffInterval(at: Date) {
+  const weekday = at.getDay() >= 1 && at.getDay() <= 5;
+  return weekday && at.getHours() >= 8 && at.getHours() < 18 ? 480 : 720;
+}
+
+export function callUnits(seconds: number, at: Date) {
+  return 1 + Math.floor(Math.max(0, seconds) / tariffInterval(at));
+}
+
+export function formatDm(amount: number) {
+  return `${amount.toFixed(2).replace(".", ",")} DM`;
+}
+
+export function formatDuration(seconds: number) {
+  const total = Math.max(0, Math.floor(seconds));
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${pad(Math.floor(total / 3600))}:${pad(Math.floor(total / 60) % 60)}:${pad(total % 60)}`;
+}
