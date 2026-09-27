@@ -1,4 +1,4 @@
-import { initBtxScreen } from "@/components/btx/BtxInput";
+import { initBtxScreen, readBaudPreference } from "@/components/btx/BtxInput";
 import { initBtxNavigation } from "@/lib/terminal/navigation";
 import { BUSY_STATES, CONNECTION_LABELS, MODEM_PROFILES, UNIT_PRICE_DM, callUnits, formatDm, formatDuration, parseModemSpeed, type ConnectionState } from "@/lib/terminal/connection";
 import { TerminalAudio, type HandsetPlace } from "@/lib/terminal/audio";
@@ -23,7 +23,7 @@ export async function initTerminal() {
   const write = (key: string, value: string) => { try { localStorage.setItem(key, value); } catch { /* Preferences are optional. */ } };
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   let state: ConnectionState = "idle";
-  let speed = parseModemSpeed(read("btx-baud", "1200"));
+  let speed = parseModemSpeed(String(readBaudPreference()));
   let scene: DeskScene | undefined;
   let focus = innerWidth / (innerHeight - 118) < 0.85;
   let sound = read("btx-sound", "true") === "true";

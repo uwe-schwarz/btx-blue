@@ -24,9 +24,14 @@ function parseBaud(value: string | null): BtxBaud {
   return isBtxBaud(parsed) ? parsed : DEFAULT_BAUD;
 }
 
-function readBaudPreference(): BtxBaud {
+/**
+ * Every visit starts at 1200/75 like a real Btx line; a different rate only lasts for the session.
+ * Older versions kept the choice in localStorage forever, so that stale value is dropped.
+ */
+export function readBaudPreference(): BtxBaud {
   try {
-    return parseBaud(window.localStorage.getItem(BAUD_STORAGE_KEY));
+    window.localStorage.removeItem(BAUD_STORAGE_KEY);
+    return parseBaud(window.sessionStorage.getItem(BAUD_STORAGE_KEY));
   } catch {
     return DEFAULT_BAUD;
   }
@@ -34,7 +39,7 @@ function readBaudPreference(): BtxBaud {
 
 function writeBaudPreference(baud: BtxBaud) {
   try {
-    window.localStorage.setItem(BAUD_STORAGE_KEY, String(baud));
+    window.sessionStorage.setItem(BAUD_STORAGE_KEY, String(baud));
   } catch {
     // Ignore storage failures and keep the in-memory selection.
   }

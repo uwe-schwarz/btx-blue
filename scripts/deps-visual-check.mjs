@@ -139,7 +139,7 @@ function joinUrl(baseUrl, relativeUrl) {
 
 async function installVisualRegressionMode(page) {
   await page.addInitScript(() => {
-    window.localStorage.setItem("btx-baud", "LINE");
+    window.sessionStorage.setItem("btx-baud", "LINE");
     window.localStorage.setItem("btx-bit-flip-enabled", "false");
     window.localStorage.setItem("btx-bit-flip-noise", "0");
     document.documentElement.dataset.visualRegression = "true";

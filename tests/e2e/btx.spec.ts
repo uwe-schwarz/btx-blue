@@ -22,6 +22,16 @@ test("baud-rate setting defaults to 1200 and persists", async ({ page }) => {
   await expect(page.locator("[data-btx-baud-option][value='LINE']")).toBeChecked();
 });
 
+test("a new visit starts at 1200/75 even after another rate was chosen", async ({ context, page }) => {
+  await page.goto("/000");
+  await page.getByRole("button", { name: "Einstellungen", exact: true }).click();
+  await page.locator("[data-btx-baud-option][value='LINE']").check();
+  const visit = await context.newPage();
+  await visit.goto("/000");
+  await expect(visit.locator("[data-btx-baud-option][value='1200']")).toBeChecked();
+  await expect(visit.locator("[data-connection-profile]")).toContainText("1200/75");
+});
+
 test("numerische Navigation funktioniert", async ({ page }) => {
   await page.goto("/000");
   await page.getByRole("button", { name: "Direkt verbinden" }).click();
