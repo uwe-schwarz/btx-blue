@@ -56,6 +56,15 @@ describe("FSK transmitter", () => {
     expect(frequency(busy, rate)).toBeLessThan(2300);
     expect(transmitter.pending).toBe(1);
   });
+  it("tells data apart from the idle carrier so the Trägerton can be muted", () => {
+    const transmitter = new FskTransmitter(V23.down, 48000);
+    expect(transmitter.busy).toBe(false);
+    transmitter.enqueue([0x41]);
+    expect(transmitter.busy).toBe(true);
+    // One 8N1 character lasts ten bits at 1200 bit/s.
+    transmitter.render(new Float32Array(Math.ceil((48000 * 10) / 1200) + 1), 0.3);
+    expect(transmitter.busy).toBe(false);
+  });
   it("transmits each page cell as one character plus row addressing", () => {
     const bytes = pageBytes("Grüße".padEnd(40) + "x".padEnd(40));
     expect(bytes).toHaveLength(80 + 6);

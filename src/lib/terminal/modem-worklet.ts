@@ -13,7 +13,9 @@ export type ModemMessage =
   | { type: "carrier"; down?: boolean; up?: boolean }
   | { type: "send"; channel: "down" | "up"; bytes: number[] }
   | { type: "clear"; channel?: "down" | "up" }
-  | { type: "noise"; level: number };
+  | { type: "noise"; level: number }
+  /** Silence the idle carrier (Trägerton) so only actual data is heard. */
+  | { type: "quiet"; value: boolean };
 
 /**
  * Real-time modem: output channel 0 is the forward channel arriving from the
@@ -32,6 +34,9 @@ class ModemProcessor extends AudioWorkletProcessor {
   private crackle = 0;
   private scratch = new Float32Array(128);
   private idleReported = true;
+  private quiet = false;
+  private downHold = 0;
+  private upHold = 0;
 
   constructor() {
     super();
@@ -54,6 +59,8 @@ class ModemProcessor extends AudioWorkletProcessor {
       if (message.channel !== "down") this.up?.clear();
     } else if (message.type === "noise") {
       this.noise = Math.max(0, Math.min(1, message.level));
+    } else if (message.type === "quiet") {
+      this.quiet = message.value;
     }
   }
 
@@ -79,8 +86,14 @@ class ModemProcessor extends AudioWorkletProcessor {
     if (!output?.length) return true;
     const down = output[0];
     const up = output[1] ?? output[0];
-    this.downLevel = this.channel(this.down, down, this.downLevel, this.downTarget, 0.3);
-    this.upLevel = this.channel(this.up, up, this.upLevel, this.upTarget, 0.26);
+    // With the carrier tone suppressed, a channel only sounds while bytes are on the wire (plus a short hang time).
+    const hold = sampleRate * 0.06;
+    this.downHold = this.down?.busy ? hold : Math.max(0, this.downHold - down.length);
+    this.upHold = this.up?.busy ? hold : Math.max(0, this.upHold - up.length);
+    const downGoal = this.quiet && this.downHold <= 0 ? 0 : this.downTarget;
+    const upGoal = this.quiet && this.upHold <= 0 ? 0 : this.upTarget;
+    this.downLevel = this.channel(this.down, down, this.downLevel, downGoal, 0.3);
+    this.upLevel = this.channel(this.up, up, this.upLevel, upGoal, 0.26);
     if (this.noise > 0 && this.downLevel > 0.01) {
       // Line noise: hiss plus the occasional crackle that flips received bits.
       for (let i = 0; i < down.length; i++) {

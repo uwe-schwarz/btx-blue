@@ -71,6 +71,8 @@ export class FskTransmitter {
   constructor(private channel: FskChannel, private sampleRate: number) {}
 
   get pending() { return this.queue.length + (this.bits.length ? 1 : 0); }
+  /** True while a character is being sent; false while only the idle mark (carrier) tone runs. */
+  get busy() { return this.queue.length > 0 || this.bits.length > 0; }
   enqueue(bytes: Iterable<number>) { for (const byte of bytes) this.queue.push(byte & 0xff); }
   clear() { this.queue = []; this.bits = []; }
 
@@ -101,6 +103,8 @@ export class QamTransmitter {
 
   constructor(private channel: QamChannel, private sampleRate: number, seed = 1985) { this.random = seed >>> 0 || 1; }
   get pending() { return 0; }
+  /** Scrambled QAM has no audible idle state. */
+  get busy() { return true; }
   enqueue(_bytes: Iterable<number>) { /* Scrambled data sounds the same as idle data. */ }
   clear() { /* Nothing queued. */ }
 

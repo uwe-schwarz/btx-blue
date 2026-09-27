@@ -224,6 +224,8 @@ export async function initTerminal() {
     audio.setLine(true);
     if (acoustic()) audio.setHandset("coupler");
     audio.carrier(true);
+    // Bytes sent before the modem worklet existed were lost; queue what is still to come.
+    if (transferring) audio.transmit(remainingPage());
   }
 
   async function cancel() {
@@ -449,6 +451,10 @@ export async function initTerminal() {
     write("btx-volume", value);
   });
   query("desk-lamp").addEventListener("change", toggleLamp);
+  const carrierToggle = query<HTMLInputElement>("desk-carrier");
+  carrierToggle.checked = read("btx-carrier-tone", "true") === "true";
+  audio.setCarrierTone(carrierToggle.checked);
+  carrierToggle.addEventListener("change", () => { audio.setCarrierTone(carrierToggle.checked); write("btx-carrier-tone", String(carrierToggle.checked)); });
   document.querySelector("[data-btx-baud-form]")?.addEventListener("change", (event) => {
     if (!(event.target as HTMLElement).matches("[data-btx-baud-option]")) return;
     const wasOnline = state === "online" || state === "paused";

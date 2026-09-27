@@ -196,6 +196,7 @@ export class TerminalAudio {
       split.connect(this.upIn, 1);
       this.modem.port.onmessage = (event) => { if (event.data?.type === "idle") this.onModemIdle?.(); };
       this.post({ type: "profile", speed: this.speed });
+      this.post({ type: "quiet", value: !this.carrierTone });
     } catch (error) {
       console.warn("Modem worklet unavailable; using a looped carrier", error);
     }
@@ -496,6 +497,12 @@ export class TerminalAudio {
     this.later(10 / 75 + 0.03, () => this.post({ type: "send", channel: "down", bytes: [code] }));
   }
   setLineNoise(level: number) { this.post({ type: "noise", level }); }
+  /** The steady carrier between characters can be switched off; data bursts and keystrokes stay audible. */
+  setCarrierTone(audible: boolean) {
+    this.carrierTone = audible;
+    this.post({ type: "quiet", value: !audible });
+  }
+  private carrierTone = true;
 
   key(name: string, down: boolean, pan = 0) {
     if (!this.context) return;
