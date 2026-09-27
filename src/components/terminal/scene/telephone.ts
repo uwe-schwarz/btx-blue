@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { FINGER_STOP, holeAngle } from "@/lib/terminal/dial";
-import { DecalAtlas, V, mesh, place, roundedBox, roundedLoft, sectionAtHeight, text, type LoftSection } from "./kit";
+import { DecalAtlas, V, mesh, place, roundedBox, roundedLoft, sectionAtHeight, type LoftSection } from "./kit";
 import type { Materials } from "./materials";
 
 /**
@@ -27,9 +27,8 @@ const DIAL_RADIUS = 0.47;
 const HOLE_RADIUS = 0.355;
 const HOLE_SIZE = 0.07;
 const CENTER_RADIUS = 0.28;
-/** Capsule centres and radius of the handset. */
+/** Capsule centres of the handset (0.235 radius, clear of the crown's flanks). */
 const CAPSULE_X = 0.88;
-const CAPSULE_RADIUS = 0.235;
 
 /** Where the handset bridges the crown, relative to the phone origin. */
 export const CRADLE = { position: new THREE.Vector3(0, 0.72, -0.4), quaternion: new THREE.Quaternion() };
