@@ -35,7 +35,12 @@ export class ScreenRaster {
     this.canvas.width = this.previous.width = width;
     this.canvas.height = this.previous.height = height;
     this.context = this.canvas.getContext("2d")!;
-    this.observer = new MutationObserver(() => this.invalidate());
+    this.observer = new MutationObserver((records) => {
+      const revealOnly = records.every((record) => record.type === "attributes" && record.attributeName === "style" &&
+        record.target instanceof HTMLElement && record.target.matches("[data-btx-grid]"));
+      if (revealOnly) this.onChange?.();
+      else this.invalidate();
+    });
     this.observer.observe(screen, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["class", "style", "hidden", "value", "placeholder"] });
     const options = { signal: this.abort.signal, capture: true };
     for (const type of ["input", "focusin", "focusout", "pointerover", "pointerout", "keyup", "select"]) screen.addEventListener(type, () => this.invalidate(), options);

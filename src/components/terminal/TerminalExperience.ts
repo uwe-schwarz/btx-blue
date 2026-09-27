@@ -360,7 +360,10 @@ export async function initTerminal() {
   }
   function setFocus(value: boolean) { goTo(value ? "screen" : "desk"); }
   const navHint = query<HTMLElement>("desk-navhint");
+  let navHintTimer: number | undefined;
   function hideNavHint() {
+    window.clearTimeout(navHintTimer);
+    navHintTimer = undefined;
     if (navHint.hidden) return;
     navHint.hidden = true;
     write("btx-nav-hint", "seen");
@@ -395,6 +398,8 @@ export async function initTerminal() {
     flat = value;
     write("btx-flat", String(value));
     if (value) {
+      window.clearTimeout(navHintTimer);
+      navHintTimer = undefined;
       source.append(screen);
       scene?.dispose();
       scene = undefined;
@@ -421,7 +426,7 @@ export async function initTerminal() {
       if (read("btx-nav-hint", "") !== "seen") {
         if (window.matchMedia("(pointer: coarse)").matches) navHint.textContent = "Wischen: umsehen · Zwei Finger: zoomen und verschieben";
         navHint.hidden = false;
-        window.setTimeout(hideNavHint, 14000);
+        navHintTimer = window.setTimeout(hideNavHint, 14000);
       }
       scene.setTransfer(transferring);
       scene.setBrightness(Number(query<HTMLInputElement>("desk-brightness").value));

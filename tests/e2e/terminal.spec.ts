@@ -80,6 +80,8 @@ test("switches modem profiles, keeps sound preference, and supports the flat fal
   await page.getByRole("button", { name: "Ohne 3D" }).click();
   await expect(page.locator("[data-terminal]")).toHaveClass(/desk-flat/);
   await expect(page.locator("canvas.desk-webgl")).toHaveCount(0);
+  await expect(page.locator(".btx-screen")).toBeVisible();
+  await expect(page.locator(".btx-screen")).toHaveCSS("user-select", "auto");
   await page.getByRole("button", { name: "Einstellungen schließen" }).click();
   await page.getByRole("button", { name: "Direkt verbinden" }).click();
   await page.getByLabel("Dreistellige Seitennummer").fill("100");

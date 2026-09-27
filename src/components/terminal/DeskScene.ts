@@ -106,6 +106,7 @@ export class DeskScene {
   private acoustic = true;
   private speed: ModemSpeed = 1200;
   private transferring = false;
+  private ledsActive = false;
   private lampOn = true;
   private powered = true;
   private handsetPlace: HandsetPlace = "cradle";
@@ -593,7 +594,9 @@ export class DeskScene {
     this.coupler.leds.data.emissiveIntensity = flicker;
     const lit = [this.speed === 9600, false, carrier, ["dialing", "answering", "coupling", "online"].includes(this.connection), flicker > 1, now < this.blinkUntil, this.powered, true];
     this.modem.leds.forEach((led, index) => { led.emissiveIntensity = lit[index] ? 2.4 : 0; });
-    return active;
+    const changed = active !== this.ledsActive;
+    this.ledsActive = active;
+    return active || changed;
   }
 
   /** Development aid: pin the camera to inspect a device up close. */
@@ -758,6 +761,10 @@ export class DeskScene {
     this.controls.dispose();
     this.raster.dispose();
     this.screenObject.element.classList.remove("crt-rendered");
+    for (const property of ["position", "pointer-events", "user-select", "transform", "display"]) {
+      this.screenObject.element.style.removeProperty(property);
+    }
+    this.screenObject.element.removeAttribute("draggable");
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
     this.scene.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
