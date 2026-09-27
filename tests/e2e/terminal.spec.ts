@@ -133,3 +133,24 @@ test("keeps the screen aligned when inputs receive focus during a mobile camera 
   expect(offsets.every((offset) => offset === 0)).toBe(true);
   await expect(page.locator("[data-btx-search-result='0']")).toContainText("340");
 });
+
+test("lets the visitor look around freely and fly back to framed views", async ({ page }) => {
+  await page.goto("/000");
+  await expect(page.locator("[data-terminal]")).toHaveAttribute("data-ready", "true", { timeout: 20000 });
+  await page.getByRole("button", { name: "Tastatur", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Tastatur", exact: true })).toHaveAttribute("aria-pressed", "true");
+  // Let the camera arrive, then drag on open desk (not on the screen, which stays interactive HTML).
+  await page.waitForTimeout(2500);
+  const box = (await page.locator("canvas.desk-webgl").boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.9, box.y + box.height * 0.85);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.65, box.y + box.height * 0.8, { steps: 8 });
+  await page.mouse.up();
+  // Dragging hands the camera to the visitor: no framed view is selected any more.
+  await expect(page.locator("[data-desk-goto][aria-pressed='true']")).toHaveCount(0);
+  await expect(page.locator("[data-desk-navhint]")).toBeHidden();
+  await page.getByRole("button", { name: "Monitor", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Schreibtisch" })).toBeVisible();
+  await page.getByRole("button", { name: "Gesamt", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Gesamt", exact: true })).toHaveAttribute("aria-pressed", "true");
+});

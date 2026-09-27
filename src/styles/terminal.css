@@ -70,6 +70,14 @@ body:has(.terminal-ready) { background: #0d0e0b; overflow: clip; }
 .desk-actions button:first-child { font-weight: 700; }
 .desk-hint { color: #a39d86; font: 11px/1.45 Helvetica, Arial, sans-serif; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 .desk-hint button { border: 0; background: transparent; color: #e0c98f; font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0; }
+/* Camera views: a small tray of cream keys over the scene. */
+.desk-views, .desk-navhint { display: none; }
+.terminal-ready .desk-views { display: flex; position: absolute; z-index: 10; top: 14px; left: 14px; gap: 2px; padding: 3px; background: #121110d9; border: 1px solid #000; border-radius: 4px; box-shadow: 0 6px 18px #0006, inset 0 1px 0 #ffffff12; }
+.desk-views button { padding: 7px 10px 6px; background: linear-gradient(#e7ddc4, #cfc3a6); border: 0; border-radius: 2px 2px 3px 3px; box-shadow: inset 0 1px 0 #fff8, inset 0 -2px 0 #a99d80; color: #2e332a; font: 600 11px Helvetica, Arial, sans-serif; cursor: pointer; }
+.desk-views button:hover { background: linear-gradient(#f3ead4, #d9cdb0); }
+.desk-views button[aria-pressed="true"] { background: #b3a88c; box-shadow: inset 0 1px 3px #0005; }
+.terminal-ready .desk-navhint:not([hidden]) { display: block; position: absolute; z-index: 10; top: 54px; left: 14px; margin: 0; padding: 6px 10px; max-width: min(560px, calc(100vw - 28px)); background: #121110cc; border-radius: 3px; color: #d9cfb3; font: 11px/1.4 Helvetica, Arial, sans-serif; pointer-events: none; }
+.terminal-ready.desk-flat .desk-views, .terminal-ready.desk-flat .desk-navhint { display: none; }
 .desk-tooltip { position: fixed; z-index: 20; pointer-events: none; background: #e9dfc6; color: #2f342a; font: 600 12px Helvetica, Arial, sans-serif; padding: 7px 11px; border-radius: 2px; border: 1px solid #b6aa8b; box-shadow: 0 6px 18px #0007; }
 .desk-tooltip:empty { display: none; }
 
@@ -117,6 +125,9 @@ body:has(.terminal-ready) { background: #0d0e0b; overflow: clip; }
   .terminal-ready .desk-stage { bottom: 104px; }
 }
 @media (max-width: 720px) {
+  .terminal-ready .desk-views { top: 8px; left: 8px; right: 8px; overflow-x: auto; scrollbar-width: none; }
+  .desk-views button { flex: none; padding: 7px 8px 6px; }
+  .terminal-ready .desk-navhint:not([hidden]) { top: 48px; left: 8px; }
   .terminal-ready { min-height: 440px; }
   .terminal-ready .desk-console { grid-template-columns: 1fr; min-height: 128px; gap: 8px; }
   .terminal-ready .desk-stage { bottom: 128px; }

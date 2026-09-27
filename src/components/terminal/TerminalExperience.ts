@@ -5,7 +5,7 @@ import { TerminalAudio, type HandsetPlace } from "@/lib/terminal/audio";
 import { BTX_NUMBER, digitsDialed, planDial } from "@/lib/terminal/dial";
 import { localScreen, type LocalScreenInfo, type ScreenRow } from "@/lib/terminal/local-screens";
 import { pageBytes } from "@/lib/terminal/modem";
-import type { DeskScene, DeskAction } from "./DeskScene";
+import type { DeskScene, DeskAction, DeskView } from "./DeskScene";
 
 export async function initTerminal() {
   const rootElement = document.querySelector<HTMLElement>("[data-terminal]");
@@ -25,7 +25,9 @@ export async function initTerminal() {
   let state: ConnectionState = "idle";
   let speed = parseModemSpeed(String(readBaudPreference()));
   let scene: DeskScene | undefined;
-  let focus = innerWidth / (innerHeight - 118) < 0.85;
+  let portrait = innerWidth / (innerHeight - 118) < 0.85;
+  let focus = portrait;
+  let view: DeskView | "free" = focus ? "screen" : "desk";
   let sound = read("btx-sound", "true") === "true";
   let lamp = true;
   let flat = read("btx-flat", "false") === "true";
@@ -343,12 +345,25 @@ export async function initTerminal() {
     if (name === "speed" || name === "brightness") showSettings(true);
   }
 
-  function setFocus(value: boolean) {
-    focus = value;
-    scene?.focus(value);
-    root.classList.toggle("desk-focused", value);
-    query("desk-view").textContent = value ? "Schreibtisch" : "Bildschirm";
-    query("desk-view").setAttribute("aria-pressed", String(value));
+  /** Mirrors the camera's framed view in the console toggle and the view chips. */
+  function syncView(next: DeskView | "free") {
+    view = next;
+    focus = next === "screen";
+    root.classList.toggle("desk-focused", focus);
+    query("desk-view").textContent = focus ? "Schreibtisch" : "Bildschirm";
+    query("desk-view").setAttribute("aria-pressed", String(focus));
+    for (const chip of root.querySelectorAll<HTMLButtonElement>("[data-desk-goto]")) chip.setAttribute("aria-pressed", String(chip.dataset.deskGoto === next));
+  }
+  function goTo(next: DeskView) {
+    scene?.flyTo(next);
+    syncView(next);
+  }
+  function setFocus(value: boolean) { goTo(value ? "screen" : "desk"); }
+  const navHint = query<HTMLElement>("desk-navhint");
+  function hideNavHint() {
+    if (navHint.hidden) return;
+    navHint.hidden = true;
+    write("btx-nav-hint", "seen");
   }
   function showSettings(value: boolean) {
     settings.hidden = !value;
@@ -401,7 +416,13 @@ export async function initTerminal() {
       scene.setConnection(state);
       scene.setLamp(lamp);
       scene.setPower(state !== "off", true);
-      scene.focus(focus);
+      scene.onView = syncView;
+      if (view !== "desk" && view !== "free") scene.flyTo(view);
+      if (read("btx-nav-hint", "") !== "seen") {
+        if (window.matchMedia("(pointer: coarse)").matches) navHint.textContent = "Wischen: umsehen · Zwei Finger: zoomen und verschieben";
+        navHint.hidden = false;
+        window.setTimeout(hideNavHint, 14000);
+      }
       scene.setTransfer(transferring);
       scene.setBrightness(Number(query<HTMLInputElement>("desk-brightness").value));
       scene.setEffect(Number(query<HTMLInputElement>("desk-crt").value));
@@ -472,7 +493,7 @@ export async function initTerminal() {
   noiseToggle?.addEventListener("change", syncNoise);
   noiseLevel?.addEventListener("input", syncNoise);
   screen.addEventListener("click", (event) => {
-    if (!(event.target as Element).closest("a, button, input")) setFocus(true);
+    if (!(event.target as Element).closest("a, button, input")) scene?.focusScreenIfFar();
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") { if (!settings.hidden) showSettings(false); else setFocus(false); }
@@ -496,7 +517,14 @@ export async function initTerminal() {
   });
   document.addEventListener("btx:page", () => scene?.afterglow());
   document.addEventListener("visibilitychange", () => { void (document.hidden ? audio.suspend() : audio.resume()); });
-  window.addEventListener("resize", () => { fitFlat(); setFocus(innerWidth / (innerHeight - 118) < 0.85); });
+  // Only a switch between portrait and landscape changes the view; free navigation survives resizing.
+  window.addEventListener("resize", () => {
+    fitFlat();
+    const next = innerWidth / (innerHeight - 118) < 0.85;
+    if (next !== portrait) { portrait = next; setFocus(portrait); }
+  });
+  for (const chip of root.querySelectorAll<HTMLButtonElement>("[data-desk-goto]")) chip.addEventListener("click", () => goTo(chip.dataset.deskGoto as DeskView));
+  stage.addEventListener("desk:navigate", hideNavHint);
   stage.addEventListener("desk:unavailable", () => void setFlat(true));
   initBtxNavigation(() => {
     initBtxScreen();

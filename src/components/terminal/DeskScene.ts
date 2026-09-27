@@ -7,6 +7,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import type { ConnectionState, ModemSpeed } from "@/lib/terminal/connection";
 import type { HandsetPlace } from "@/lib/terminal/audio";
 import { dialRotation, type DialPlan } from "@/lib/terminal/dial";
@@ -21,6 +22,8 @@ import { buildDesk, buildLamp, buildNotepad, buildProps } from "./scene/room";
 import { SpiralCord } from "./scene/cord";
 
 export type DeskAction = "receiver" | "dial" | "power" | "brightness" | "lamp" | "speed" | "screen" | `key:${string}`;
+/** Framed camera views; "free" once the visitor navigates on their own. */
+export type DeskView = "desk" | "screen" | "terminal" | "keyboard" | "telephone" | "coupler";
 
 const LAYOUT = {
   monitor: V(-1.1, 0, -0.9),
@@ -90,11 +93,15 @@ export class DeskScene {
   private clicks: THREE.Object3D[] = [];
   private raycaster = new THREE.Raycaster();
   private pointer = new THREE.Vector2();
-  private parallax = new THREE.Vector2();
   private hovered?: THREE.Object3D;
   private screenWorld = new THREE.Vector3();
-  private lookAt = DESK_TARGET.clone();
-  private focused = false;
+  private controls: OrbitControls;
+  private view: DeskView | "free" = "desk";
+  private flight?: { from: THREE.Vector3; fromTarget: THREE.Vector3; to: THREE.Vector3; toTarget: THREE.Vector3; start: number; duration: number };
+  private dragging = false;
+  private screenElement: HTMLElement;
+  /** Called when the framed view changes, including to "free" navigation. */
+  onView?: (view: DeskView | "free") => void;
   private connection: ConnectionState = "idle";
   private acoustic = true;
   private speed: ModemSpeed = 1200;
@@ -156,6 +163,11 @@ export class DeskScene {
     place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(20, 13.33), this.backdrop), [0.3, 0.75, BACKDROP_Z]);
     const catcher = place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(20, 13.33), new THREE.ShadowMaterial({ opacity: 0.42 })), [0.3, 0.75, BACKDROP_Z + 0.05]);
     catcher.receiveShadow = true;
+    // Side walls and a floor, so free navigation never looks into the void around the wall photo.
+    const plaster = new THREE.MeshStandardMaterial({ color: 0x3b3a24, roughness: 1 });
+    place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(15, 16), plaster), [-9.7, 1.2, 3.1], [0, Math.PI / 2, 0]);
+    place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(15, 16), plaster), [10.3, 1.2, 3.1], [0, -Math.PI / 2, 0]);
+    place(this.scene, new THREE.Mesh(new THREE.PlaneGeometry(22, 16), new THREE.MeshStandardMaterial({ color: 0x21180f, roughness: 1 })), [0.3, -7.4, 3.6], [-Math.PI / 2, 0, 0]);
 
     this.monitor = buildMonitor(this.m, this.atlas, this.raster);
     place(this.scene, this.monitor.group, LAYOUT.monitor.toArray());
@@ -232,7 +244,29 @@ export class DeskScene {
     this.interactive(this.lamp.group, "lamp", "Schreibtischlampe schalten");
     this.interactive(this.monitor.tube.group, "screen", "Näher an den Bildschirm");
 
+    // Free navigation: drag to look around, wheel/pinch to zoom towards the cursor, right-drag to pan.
+    this.screenElement = screen;
     this.camera.position.set(1.2, 6.5, 18);
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.target.copy(DESK_TARGET);
+    this.controls.enableDamping = !this.reduced.matches;
+    this.controls.dampingFactor = 0.09;
+    this.controls.zoomToCursor = true;
+    this.controls.screenSpacePanning = true;
+    this.controls.minDistance = 0.8;
+    this.controls.maxDistance = 19;
+    this.controls.maxPolarAngle = THREE.MathUtils.degToRad(87);
+    this.controls.minAzimuthAngle = -1.15;
+    this.controls.maxAzimuthAngle = 1.15;
+    this.controls.rotateSpeed = 0.55;
+    this.controls.panSpeed = 0.9;
+    this.controls.addEventListener("start", this.navigationStart);
+    this.controls.addEventListener("end", this.navigationEnd);
+    this.controls.addEventListener("change", this.navigationChange);
+    screen.addEventListener("wheel", this.forwardWheel, { passive: false });
+    this.renderer.domElement.addEventListener("dblclick", this.doubleClick);
+    this.renderer.domElement.style.cursor = "grab";
+    this.flyTo("desk");
     this.applyHandset("cradle");
     stage.addEventListener("pointermove", this.pointerMove);
     stage.addEventListener("pointerdown", this.pointerDown);
@@ -344,7 +378,98 @@ export class DeskScene {
   setBrightness(value: number) { this.monitor.tube.setBrightness(value); this.kick(); }
   setEffect(value: number) { this.monitor.tube.setEffect(value); this.kick(); }
   afterglow() { if (!this.reduced.matches) this.monitor.tube.afterglow(performance.now()); this.kick(); }
-  focus(value: boolean) { this.focused = value; this.resize(); }
+  focus(value: boolean) { this.flyTo(value ? "screen" : "desk"); }
+  get currentView() { return this.view; }
+  /** Clicking the screen from afar brings it close; up close it only interacts. */
+  focusScreenIfFar() { if (this.camera.position.distanceTo(this.screenWorld) > 6.5) this.flyTo("screen"); }
+
+  private setView(view: DeskView | "free") {
+    if (this.view === view) return;
+    this.view = view;
+    this.onView?.(view);
+  }
+
+  /** Where the camera goes for each framed view; distances fit the viewport aspect. */
+  private preset(view: DeskView) {
+    const tanHalf = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
+    const aspect = this.camera.aspect;
+    const fit = (halfWidth: number, halfHeight: number) => Math.max(halfHeight / tanHalf, halfWidth / (tanHalf * aspect));
+    const along = (target: THREE.Vector3, direction: THREE.Vector3, distance: number) => ({ target, position: target.clone().addScaledVector(direction.normalize(), distance) });
+    const local = (object: THREE.Object3D, x: number, y: number, z: number) => object.localToWorld(V(x, y, z));
+    if (view === "screen") {
+      const target = this.screenWorld.clone().add(V(0, 0.02, 0));
+      return { target, position: target.clone().add(V(0, 0.08, fit(1.72, 1.45))) };
+    }
+    if (view === "terminal") return along(local(this.monitor.group, 0.35, 0.95, 0.1), V(0.38, 0.16, 1), fit(1.6, 1.05));
+    if (view === "keyboard") return along(local(this.keyboard.group, 0, 0.32, -0.05), V(0, 1, 0.42), fit(2.55, 1.25));
+    if (view === "telephone") {
+      const target = local(this.phone.group, 0, 0.55, 0.1);
+      return along(target, local(this.phone.group, -0.55, 0.9, 1).sub(this.phone.group.position), fit(1.6, 1.25));
+    }
+    if (view === "coupler") {
+      const target = local(this.coupler.group, 0, 0.5, 0);
+      return along(target, local(this.coupler.group, -0.2, 0.75, 1).sub(this.coupler.group.position), fit(1.9, 1.1));
+    }
+    const distance = fit(6.5, 3.3);
+    return { target: DESK_TARGET.clone(), position: DESK_TARGET.clone().add(V(0.3, distance * 0.21, distance)) };
+  }
+
+  /** Animated camera move to a framed view; any drag or zoom takes over immediately. */
+  flyTo(view: DeskView, instant = false) {
+    const { target, position } = this.preset(view);
+    this.setView(view);
+    if (instant || this.reduced.matches) {
+      this.flight = undefined;
+      this.camera.position.copy(position);
+      this.controls.target.copy(target);
+      this.camera.lookAt(target);
+      this.kick();
+      return;
+    }
+    const distance = this.camera.position.distanceTo(position) + this.controls.target.distanceTo(target);
+    this.flight = { from: this.camera.position.clone(), fromTarget: this.controls.target.clone(), to: position, toTarget: target, start: performance.now(), duration: THREE.MathUtils.clamp(650 + distance * 70, 750, 1700) };
+    this.kick();
+  }
+
+  private navigationStart = () => {
+    this.flight = undefined;
+    this.dragging = true;
+    this.renderer.domElement.style.cursor = "grabbing";
+    this.stage.dispatchEvent(new Event("desk:navigate"));
+  };
+  private navigationEnd = () => {
+    this.dragging = false;
+    this.renderer.domElement.style.cursor = this.hovered ? "pointer" : "grab";
+  };
+  private navigationChange = () => {
+    if (this.dragging && !this.flight) this.setView("free");
+    this.kick();
+  };
+
+  /** The invisible HTML screen sits above the canvas; let the wheel still zoom through it. */
+  private forwardWheel = (event: WheelEvent) => {
+    event.preventDefault();
+    this.renderer.domElement.dispatchEvent(new WheelEvent("wheel", event));
+  };
+
+  /** Double-click on anything that is not a control: glide in and orbit around that spot. */
+  private doubleClick = (event: MouseEvent) => {
+    if (this.pick(event as PointerEvent)) return;
+    const hit = this.raycaster.intersectObjects(this.scene.children, true).find((candidate) => candidate.object.visible && candidate.distance > 0.2);
+    if (!hit) return;
+    const direction = this.camera.position.clone().sub(this.controls.target).normalize();
+    const distance = Math.min(this.camera.position.distanceTo(hit.point), 3.2);
+    this.flight = { from: this.camera.position.clone(), fromTarget: this.controls.target.clone(), to: hit.point.clone().addScaledVector(direction, distance), toTarget: hit.point.clone(), start: performance.now(), duration: 800 };
+    this.setView("free");
+    this.kick();
+  };
+
+  /** Keeps the target on the desk and the camera in front of the wall and above the desk top. */
+  private clampCamera() {
+    const target = this.controls.target, position = this.camera.position;
+    target.set(THREE.MathUtils.clamp(target.x, -6.6, 7.6), THREE.MathUtils.clamp(target.y, 0, 4.6), THREE.MathUtils.clamp(target.z, -3.3, 4.2));
+    position.set(THREE.MathUtils.clamp(position.x, -9.2, 9.8), THREE.MathUtils.clamp(position.y, 0.3, 11.5), Math.max(position.z, -3.6));
+  }
 
   dial(plan: DialPlan) {
     this.dialPlan = { plan, start: performance.now() };
@@ -477,33 +602,28 @@ export class DeskScene {
   }
   private inspection?: { position: THREE.Vector3; target: THREE.Vector3 };
 
-  private updateCamera(dt: number) {
+  private updateCamera(now: number) {
     if (this.inspection) {
       this.camera.position.copy(this.inspection.position);
-      this.lookAt.copy(this.inspection.target);
-      this.camera.lookAt(this.lookAt);
+      this.controls.target.copy(this.inspection.target);
+      this.camera.lookAt(this.inspection.target);
       this.camera.updateMatrixWorld();
       return false;
     }
-    const tanHalf = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
-    const aspect = this.camera.aspect;
-    let target: THREE.Vector3, position: THREE.Vector3;
-    if (this.focused) {
-      target = this.screenWorld.clone().add(V(0, 0.02, 0));
-      const distance = Math.max(1.45 / tanHalf, 1.72 / (tanHalf * aspect));
-      position = target.clone().add(V(0, 0.08, distance));
-    } else {
-      target = DESK_TARGET.clone();
-      const distance = Math.max(3.3 / tanHalf, 6.5 / (tanHalf * aspect));
-      position = target.clone().add(V(0.3 + this.parallax.x * 0.28, distance * 0.21 - this.parallax.y * 0.12, distance));
+    if (this.flight) {
+      const k = Math.min(1, (now - this.flight.start) / this.flight.duration);
+      const e = easeInOut(k);
+      this.camera.position.lerpVectors(this.flight.from, this.flight.to, e);
+      this.controls.target.lerpVectors(this.flight.fromTarget, this.flight.toTarget, e);
+      this.camera.lookAt(this.controls.target);
+      if (k >= 1) { this.flight = undefined; this.controls.update(); }
+      this.camera.updateMatrixWorld();
+      return true;
     }
-    const smoothing = this.reduced.matches ? 1 : 1 - Math.exp(-dt * 4.2);
-    const moving = this.camera.position.distanceToSquared(position) > 1e-6 || this.lookAt.distanceToSquared(target) > 1e-6;
-    if (moving) { this.camera.position.lerp(position, smoothing); this.lookAt.lerp(target, smoothing); }
-    else { this.camera.position.copy(position); this.lookAt.copy(target); }
-    this.camera.lookAt(this.lookAt);
+    const moved = this.controls.update();
+    if (moved) this.clampCamera();
     this.camera.updateMatrixWorld();
-    return moving;
+    return moved;
   }
 
   private softwareRenderer() {
@@ -555,6 +675,11 @@ export class DeskScene {
     (this.grade.uniforms.uResolution.value as THREE.Vector2).set(width * ratio, height * ratio);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+    // A framed view stays framed when the window changes (also mid-flight); free navigation is left alone.
+    if (this.controls && this.view !== "free") {
+      if (!this.flight) this.flyTo(this.view, true);
+      else { const { position, target } = this.preset(this.view); this.flight.to = position; this.flight.toTarget = target; }
+    }
     this.kick();
   }
 
@@ -562,11 +687,9 @@ export class DeskScene {
     this.scheduled = false;
     if (this.stopped) return;
     const interval = now - this.previousTime;
-    // Allow large steps so slow machines still settle the camera in a few frames.
-    const dt = Math.min(0.25, interval / 1000 || 0.016);
     this.previousTime = now;
     let active = this.dirty;
-    active = this.updateCamera(dt) || active;
+    active = this.updateCamera(now) || active;
     active = this.updateHandset(now) || active;
     active = this.updateDial(now) || active;
     active = this.monitor.tube.update(now) || active;
@@ -602,14 +725,12 @@ export class DeskScene {
   }
 
   private pointerMove = (event: PointerEvent) => {
-    if ((event.target as HTMLElement).closest(".btx-screen")) { this.tooltip.textContent = ""; return; }
+    if ((event.target as HTMLElement).closest(".btx-screen") || this.dragging) { this.tooltip.textContent = ""; return; }
     this.hovered = this.pick(event);
-    this.parallax.copy(this.pointer);
-    this.stage.style.cursor = this.hovered ? "pointer" : "default";
+    this.renderer.domElement.style.cursor = this.hovered ? "pointer" : "grab";
     this.tooltip.textContent = this.hovered?.userData.title ?? "";
     this.tooltip.style.left = `${Math.min(event.clientX + 16, innerWidth - 240)}px`;
     this.tooltip.style.top = `${event.clientY - 36}px`;
-    if (!this.focused && !this.reduced.matches) this.kick();
   };
   private pointerDown = (event: PointerEvent) => { this.down = { x: event.clientX, y: event.clientY }; };
   private pointerUp = (event: PointerEvent) => {
@@ -617,7 +738,7 @@ export class DeskScene {
     const object = this.pick(event);
     if (object) this.onAction(object.userData.action as DeskAction);
   };
-  private pointerLeave = () => { this.tooltip.textContent = ""; this.parallax.set(0, 0); this.kick(); };
+  private pointerLeave = () => { this.tooltip.textContent = ""; };
   private contextLost = (event: Event) => { event.preventDefault(); this.stage.dispatchEvent(new Event("desk:unavailable")); };
 
   dispose() {
@@ -631,6 +752,9 @@ export class DeskScene {
     this.stage.removeEventListener("pointerup", this.pointerUp);
     this.stage.removeEventListener("pointerleave", this.pointerLeave);
     this.renderer.domElement.removeEventListener("webglcontextlost", this.contextLost);
+    this.renderer.domElement.removeEventListener("dblclick", this.doubleClick);
+    this.screenElement.removeEventListener("wheel", this.forwardWheel);
+    this.controls.dispose();
     this.raster.dispose();
     this.screenObject.element.classList.remove("crt-rendered");
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();

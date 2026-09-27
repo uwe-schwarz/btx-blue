@@ -4,6 +4,15 @@ import "@/styles/terminal.css";
 
 <div class="terminal-experience" data-terminal>
   <div class="desk-stage" data-desk-stage aria-label="Interaktiver BTX-Arbeitsplatz"></div>
+  <nav class="desk-views" aria-label="Ansicht wählen" data-desk-views>
+    <button type="button" data-desk-goto="desk" aria-pressed="true">Gesamt</button>
+    <button type="button" data-desk-goto="screen" aria-pressed="false">Monitor</button>
+    <button type="button" data-desk-goto="terminal" aria-pressed="false">Bedienteil</button>
+    <button type="button" data-desk-goto="keyboard" aria-pressed="false">Tastatur</button>
+    <button type="button" data-desk-goto="telephone" aria-pressed="false">Telefon</button>
+    <button type="button" data-desk-goto="coupler" aria-pressed="false">Koppler</button>
+  </nav>
+  <p class="desk-navhint" data-desk-navhint hidden>Ziehen: umsehen · Scrollen oder Zwei-Finger-Geste: zoomen · Rechte Maustaste: verschieben · Doppelklick: heranfahren</p>
   <div class="terminal-source" data-terminal-source><slot /></div>
   <div class="desk-tooltip" data-desk-tooltip aria-hidden="true"></div>
   <div class="desk-console">

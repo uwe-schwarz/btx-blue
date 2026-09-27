@@ -6,7 +6,7 @@ The concept is `terminal-concept.png`: a warm, late-evening 1985 workspace in Co
 
 Period references the models follow:
 
-- **Telephone:** Deutsche Bundespost FeTAp 611 in *farngrün*. Trapezoid body, rotary *Nummernschalter* with a clear acrylic finger wheel over a number plate, the "FEUER 112 / NOTRUF 110" centre card, a chrome finger stop just past four o'clock, cradle plungers (*Gabelumschalter*) and a coiled handset cord.
+- **Telephone:** Deutsche Bundespost FeTAp 611 in *farngrün*, modelled on a reference photo. A soft, strongly tapered trapezoid is lofted through rounded-rectangle sections, and the handset bridges the domed crown with its capsules hanging beside it. The *Nummernschalter* has a clear finger wheel over a black plate with bold white numerals and holes at the measured 25.8° pitch (1 at about one o'clock, 0 at five). The centre plate carries a numeral ring and the FEUER 112 / NOTRUF 110 strips, a black finger stop sits just past four o'clock, and there are cradle plungers and a black coiled cord.
 - **Acoustic coupler:** Woerltronic *dataphon s 21 d* (27 × 8.5 × 5 cm). Cream housing with a ribbed bellows between two blocks, thick black rubber cups spaced for a FeTAp handset, and LEDs for power, carrier and data. V.21 and V.23 (Btx 1200/75).
 - **Terminal:** a generic 14-inch Btx terminal with a curved PAL tube, charcoal inner mask, knurled brightness and contrast knobs and a mains rocker. The keyboard is German ISO QWERTZ with sculpted rows and a Btx block, where the blue `*` is the initiator and the red `#` the terminator.
 
@@ -25,6 +25,8 @@ Tokens: walnut, olive wall, ivory ABS (`#d9cfb8`), farngrün (`#4a6a45`), Btx bl
 - `lib/terminal/audio.ts`: Web Audio graph and synthesized sounds.
 - `lib/terminal/local-screens.ts`: the decoder's own screens (idle, dialling, answer, carrier, carrier lost), including a sextant-mosaic logo and the call charge after hanging up.
 
+**Navigation.** OrbitControls with damping and zoom-to-cursor: drag to look around, use the wheel or a pinch to zoom, right-drag or two fingers to pan, and double-click anything that is not a control to glide in. Limits keep the camera above the desk top and in front of the wall photo; side walls and a floor hide the void at extreme angles. The wheel also works over the invisible HTML screen, which forwards it to the canvas. Six framed views fly in with easing: Gesamt, Monitor, Bedienteil (knobs and mains switch), Tastatur (from above), Telefon and Koppler. Any drag hands the camera to the visitor ("free"). The console's Bildschirm/Schreibtisch toggle and the view chips mirror the current view. A framed view re-frames on resize, even mid-flight.
+
 Portrait viewports start in the screen close-up. Reduced motion removes camera and handset interpolation and the character reveal. The HTML-only view is selectable and is used automatically when WebGL fails. All hardware functions have HTML controls or keyboard equivalents.
 
 Quality adapts to the renderer. Software rasterisers (SwiftShader, llvmpipe) start on the low tier, and a median frame time above 42 ms steps down one tier (pixel ratio, MSAA, GTAO, bloom, shadow-map size, acrylic transmission). A dev-only `window.__desk.inspect(position, target)` pins the camera for close-ups.
@@ -41,6 +43,8 @@ Quality adapts to the renderer. Software rasterisers (SwiftShader, llvmpipe) sta
 | Couple | "Datenträger erkannt" | Rubber thump; the tone is now muffled by the cups. The 1300 Hz V.23 carrier follows, then the coupler's 390 Hz back channel. |
 | Online | The page arrives at 120 characters/s | The page's bytes as 1300/2100 Hz FSK, about 8 dB below the dial tone. Keystrokes chirp on the 390/450 Hz back channel. |
 | Hang up | Duration, *Gebühreneinheiten* and DM | Cradle clack with the faint bell tinkle. Local call at 0,23 DM per unit, one unit per 8 min (weekdays 8–18 h) or 12 min. |
+
+**Trägerton.** The steady carrier between characters (1300 Hz forward, 390 Hz back channel) can be switched off under *Einstellungen → Trägerton hörbar*. The modem then only sounds while bytes are on the wire, so page data and keystrokes stay audible. Every visit starts at 1200/75 bit/s; another rate chosen in the settings only lasts for the browser session.
 
 Direct-connect modems (2400/9600) dial by DTMF, hand-shake through the modem's monitor speaker and then mute it (ATM1). The CRT adds a power-rocker clunk, the degaussing hum, EHT crackle, a faint 50 Hz hum and the 15.625 kHz line-output whine. The room has a short convolution reverb; key switches have separate press and release sounds.
 
