@@ -16,7 +16,7 @@ const speedOptions = ["LINE", 300, 1200, 2400, 9600] as const;
   <aside class="btx-settings-panel" aria-label="BTX Einstellungen">
     <form class="btx-settings" data-btx-baud-form>
       <fieldset class="btx-settings-group btx-settings-group--baud">
-        <legend class="btx-settings-title">BAUD</legend>
+        <legend class="btx-settings-title">Verbindung · bit/s</legend>
         {speedOptions.map((option) => (
           <label class="btx-baud-option">
             <input
@@ -27,7 +27,7 @@ const speedOptions = ["LINE", 300, 1200, 2400, 9600] as const;
               checked={option === 1200}
               data-btx-baud-option
             />
-            <span class="btx-baud-option__label">{option}</span>
+            <span class="btx-baud-option__label">{option === "LINE" ? "Direkt" : option === 1200 ? "1200 / 75 · BTX" : option}</span>
           </label>
         ))}
       </fieldset>
