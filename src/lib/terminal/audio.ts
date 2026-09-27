@@ -102,6 +102,7 @@ export class TerminalAudio {
   private modem?: AudioWorkletNode;
   private fallback?: AudioBufferSourceNode;
   private speed: ModemSpeed = 1200;
+  private lineNoise = 0;
   private whine?: GainNode;
   private buffers = new Map<string, AudioBuffer[]>();
   private voices = new Set<AudioScheduledSourceNode>();
@@ -197,6 +198,7 @@ export class TerminalAudio {
       this.modem.port.onmessage = (event) => { if (event.data?.type === "idle") this.onModemIdle?.(); };
       this.post({ type: "profile", speed: this.speed });
       this.post({ type: "quiet", value: !this.carrierTone });
+      this.post({ type: "noise", level: this.lineNoise });
     } catch (error) {
       console.warn("Modem worklet unavailable; using a looped carrier", error);
     }
@@ -496,7 +498,7 @@ export class TerminalAudio {
     this.post({ type: "send", channel: "up", bytes: [code] });
     this.later(10 / 75 + 0.03, () => this.post({ type: "send", channel: "down", bytes: [code] }));
   }
-  setLineNoise(level: number) { this.post({ type: "noise", level }); }
+  setLineNoise(level: number) { this.lineNoise = level; this.post({ type: "noise", level }); }
   /** The steady carrier between characters can be switched off; data bursts and keystrokes stay audible. */
   setCarrierTone(audible: boolean) {
     this.carrierTone = audible;

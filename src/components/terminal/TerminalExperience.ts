@@ -539,6 +539,7 @@ export async function initTerminal() {
   fitFlat();
   setState("idle");
   initBtxScreen();
+  syncNoise();
   setSpeed();
   setFocus(focus);
   await document.fonts.ready;
