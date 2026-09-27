@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dialRotation, digitsDialed, FINGER_STOP, holeAngle, HOLE_STEP, planDial, PULSE_RATE, pulsesFor, travelFor } from "../../src/lib/terminal/dial";
+import { dialRotation, digitsDialed, FINGER_STOP, holeAngle, HOLE_STEP, planDial, pulsesFor, RETURN_SPEED, travelFor } from "../../src/lib/terminal/dial";
 import { callUnits, formatDm, formatDuration, tariffInterval } from "../../src/lib/terminal/connection";
 
 describe("rotary dial", () => {
@@ -7,16 +7,20 @@ describe("rotary dial", () => {
     expect(pulsesFor("0")).toBe(10);
     expect(pulsesFor("1")).toBe(1);
     expect(() => pulsesFor("#")).toThrow(RangeError);
-    // Holes are 30° apart; 1 sits at about 2 o'clock, 0 just before the stop going clockwise.
-    expect(holeAngle("1")).toBeCloseTo(FINGER_STOP - 2 * HOLE_STEP);
-    expect(travelFor("0")).toBeCloseTo((330 / 180) * Math.PI);
+    // Measured on a FeTAp 611: 1 at about one o'clock, 0 at five, the stop just past four.
+    const degrees = (radians: number) => (radians * 180) / Math.PI;
+    expect(degrees(holeAngle("1"))).toBeCloseTo(26, 0);
+    expect(degrees(holeAngle("0"))).toBeCloseTo(26 - 9 * 25.8, 0);
+    expect(degrees(FINGER_STOP)).toBeCloseTo(117, 0);
+    expect(travelFor("0") - travelFor("9")).toBeCloseTo(HOLE_STEP);
+    expect(degrees(travelFor("0"))).toBeCloseTo(323.2, 0);
   });
   it("returns at the governed 10 pulses per second with one break per pulse", () => {
     const plan = planDial("01910");
     expect(plan.steps.map((step) => step.pulses)).toEqual([10, 1, 9, 1, 10]);
     for (const step of plan.steps) {
       expect(step.pulseTimes).toHaveLength(step.pulses);
-      expect(step.returnEnd - step.returnStart).toBeCloseTo((step.pulses + 1) / PULSE_RATE);
+      expect(step.returnEnd - step.returnStart).toBeCloseTo(step.travel / RETURN_SPEED);
       step.pulseTimes.forEach((time, index) => { if (index) expect(time - step.pulseTimes[index - 1]).toBeCloseTo(0.1); });
       expect(step.pulseTimes.at(-1)!).toBeLessThan(step.returnEnd);
     }

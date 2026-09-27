@@ -242,3 +242,80 @@ export function text(context: CanvasRenderingContext2D, value: string, width: nu
   context.fillText(value, x, height / 2 + height * 0.04, width * 0.96);
   if (spacing) context.letterSpacing = "0px";
 }
+
+/** A horizontal cross-section of a moulded body: a rounded rectangle at height `y`. */
+export interface LoftSection { y: number; halfWidth: number; front: number; back: number; radius: number }
+
+const catmull = (p0: number, p1: number, p2: number, p3: number, t: number) =>
+  0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t * t * t);
+
+/** Catmull-Rom interpolation of the key sections at fractional key index `u`. */
+export function sectionAt(keys: LoftSection[], u: number): LoftSection {
+  const i = Math.min(keys.length - 2, Math.max(0, Math.floor(u)));
+  const t = u - i;
+  const at = (k: number) => keys[Math.min(keys.length - 1, Math.max(0, k))];
+  const blend = (name: keyof LoftSection) => catmull(at(i - 1)[name], at(i)[name], at(i + 1)[name], at(i + 2)[name], t);
+  return { y: blend("y"), halfWidth: blend("halfWidth"), front: blend("front"), back: blend("back"), radius: blend("radius") };
+}
+
+/** The section whose height is `y` (key heights must increase). */
+export function sectionAtHeight(keys: LoftSection[], y: number) {
+  let low = 0, high = keys.length - 1;
+  for (let step = 0; step < 40; step++) {
+    const middle = (low + high) / 2;
+    if (sectionAt(keys, middle).y < y) low = middle; else high = middle;
+  }
+  return sectionAt(keys, (low + high) / 2);
+}
+
+/**
+ * Smooth body lofted through rounded-rectangle sections (x across, z front/back), capped top and
+ * bottom. Every ring has the same vertex layout, so the rounded corners line up from bottom to top.
+ */
+export function roundedLoft(keys: LoftSection[], ringsPerKey = 5, corner = 10, edge = 6) {
+  const perimeter = 4 * edge + 2 * edge + 4 * corner;
+  const ring = (s: LoftSection) => {
+    const r = Math.max(0.001, Math.min(s.radius, s.halfWidth * 0.999, ((s.front - s.back) / 2) * 0.999));
+    const hw = s.halfWidth, zf = s.front, zb = s.back, ix = hw - r;
+    const points: [number, number][] = [];
+    const line = (x0: number, z0: number, x1: number, z1: number, count: number) => { for (let i = 0; i < count; i++) points.push([x0 + ((x1 - x0) * i) / count, z0 + ((z1 - z0) * i) / count]); };
+    const arc = (cx: number, cz: number, from: number, to: number) => { for (let i = 0; i < corner; i++) { const a = from + ((to - from) * i) / corner; points.push([cx + r * Math.cos(a), cz + r * Math.sin(a)]); } };
+    line(0, zf, ix, zf, edge);
+    arc(ix, zf - r, Math.PI / 2, 0);
+    line(hw, zf - r, hw, zb + r, edge);
+    arc(ix, zb + r, 0, -Math.PI / 2);
+    line(ix, zb, -ix, zb, edge * 2);
+    arc(-ix, zb + r, -Math.PI / 2, -Math.PI);
+    line(-hw, zb + r, -hw, zf - r, edge);
+    arc(-ix, zf - r, Math.PI, Math.PI / 2);
+    line(-ix, zf, 0, zf, edge);
+    return points;
+  };
+  const count = (keys.length - 1) * ringsPerKey + 1;
+  const sections = Array.from({ length: count }, (_, i) => sectionAt(keys, i / ringsPerKey));
+  const top = keys.at(-1)!.y;
+  const positions: number[] = [], uvs: number[] = [], index: number[] = [];
+  sections.forEach((section) => ring(section).forEach(([x, z], j) => { positions.push(x, section.y, z); uvs.push(j / perimeter, section.y / top); }));
+  for (let i = 0; i < count - 1; i++) {
+    for (let j = 0; j < perimeter; j++) {
+      const a = i * perimeter + j, b = i * perimeter + ((j + 1) % perimeter), c = a + perimeter, d = b + perimeter;
+      index.push(a, b, c, b, d, c);
+    }
+  }
+  // Top cap shares the last ring so the crown shades smoothly.
+  const last = sections.at(-1)!;
+  const crown = positions.length / 3;
+  positions.push(0, last.y + 0.004, (last.front + last.back) / 2); uvs.push(0.5, 1);
+  for (let j = 0; j < perimeter; j++) index.push(crown, (count - 1) * perimeter + j, (count - 1) * perimeter + ((j + 1) % perimeter));
+  // Bottom cap with its own vertices keeps the base edge crisp.
+  const base = positions.length / 3, first = sections[0];
+  positions.push(0, first.y, (first.front + first.back) / 2); uvs.push(0.5, 0);
+  ring(first).forEach(([x, z], j) => { positions.push(x, first.y, z); uvs.push(j / perimeter, 0); });
+  for (let j = 0; j < perimeter; j++) index.push(base, base + 1 + ((j + 1) % perimeter), base + 1 + j);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(index);
+  geometry.computeVertexNormals();
+  return geometry;
+}

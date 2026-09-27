@@ -439,9 +439,9 @@ export class DeskScene {
   private afterHandsetMove() {
     this.handset.updateMatrixWorld(true);
     const start = this.handset.localToWorld(HANDSET_CORD.clone());
-    const startOut = V(-1, -0.8, 0).applyQuaternion(this.handset.quaternion).normalize();
+    const startOut = V(1, -0.8, 0).applyQuaternion(this.handset.quaternion).normalize();
     const end = this.phone.group.localToWorld(CORD_JACK.clone());
-    const endOut = V(-1, -0.4, 0.3).applyQuaternion(this.phone.group.quaternion).normalize();
+    const endOut = V(1, -0.5, -0.2).applyQuaternion(this.phone.group.quaternion).normalize();
     this.cord.update(start, startOut, end, endOut);
     const resting = this.handsetPlace === "cradle" && !this.tween;
     for (const plunger of this.phone.plungers) plunger.position.y = resting ? PLUNGER_Y.rest : PLUNGER_Y.raised;

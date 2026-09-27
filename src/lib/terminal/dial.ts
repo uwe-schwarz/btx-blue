@@ -8,12 +8,17 @@
 export const BTX_NUMBER = "01910";
 export const PULSE_RATE = 10;
 export const PULSE_BREAK = 0.06;
-export const HOLE_STEP = Math.PI / 6;
+const DEGREE = Math.PI / 180;
+/** Angular pitch of the finger holes, measured on a FeTAp 611 (not the 30° of US dials). */
+export const HOLE_STEP = 25.8 * DEGREE;
 /** Finger stop position, clockwise from 12 o'clock (just past 4 o'clock). */
-export const FINGER_STOP = (125 / 180) * Math.PI;
+export const FINGER_STOP = 117 * DEGREE;
+/** Rest position of the "1" hole, at about one o'clock. */
+const FIRST_HOLE = 26 * DEGREE;
 
 const WINDUP_SPEED = 4.6 * Math.PI;
-const RETURN_SPEED = HOLE_STEP * PULSE_RATE;
+/** The fly governor turns the wheel back by one hole pitch per pulse. */
+export const RETURN_SPEED = HOLE_STEP * PULSE_RATE;
 
 export interface DialStep {
   digit: string;
@@ -42,11 +47,12 @@ export function pulsesFor(digit: string) {
 
 /** Rest position of a finger hole, clockwise from 12 o'clock. */
 export function holeAngle(digit: string) {
-  return FINGER_STOP - (pulsesFor(digit) + 1) * HOLE_STEP;
+  return FIRST_HOLE - (pulsesFor(digit) - 1) * HOLE_STEP;
 }
 
+/** Clockwise rotation that brings the digit's hole to the finger stop. */
 export function travelFor(digit: string) {
-  return (pulsesFor(digit) + 1) * HOLE_STEP;
+  return FINGER_STOP - holeAngle(digit);
 }
 
 /** A small, repeatable human timing variation so every digit does not sound machine-made. */
