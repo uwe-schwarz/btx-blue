@@ -231,12 +231,12 @@ export async function initTerminal() {
   }
 
   async function cancel() {
-    token++;
+    const generation = ++token;
     cancelTimers();
     audio.stop();
     setState("idle");
-    if (handset !== "cradle") { await moveHandset("cradle"); audio.hangUp(); }
-    else audio.hangUp();
+    if (handset !== "cradle") await moveHandset("cradle");
+    if (generation === token) audio.hangUp();
   }
 
   async function hangUp() {
