@@ -45,6 +45,7 @@ const TARGETS = [
           const text = node.textContent?.trim() ?? "";
           return text !== "" && text !== "STICHWORT EINGEBEN" && text !== "KEIN TREFFER";
         },
+        undefined,
         { timeout: timeoutMs },
       );
       await input.blur();
@@ -205,6 +206,7 @@ async function ensureDeterministicBtxState(page, timeoutMs) {
         slider.disabled
       );
     },
+    undefined,
     { timeout: timeoutMs },
   );
 }
@@ -215,6 +217,7 @@ async function connectForVisualCapture(page, timeoutMs) {
     () =>
       document.documentElement.dataset.connection === "online" &&
       document.querySelector(".screen-connection")?.hasAttribute("hidden"),
+    undefined,
     { timeout: timeoutMs },
   );
 }
