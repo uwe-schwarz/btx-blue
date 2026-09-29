@@ -17,7 +17,7 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const MIN_ALLOWED_PIXEL_RATIO = 0.00002;
 const MIN_ALLOWED_PIXELS = 100;
 const NOISE_MULTIPLIER = 3;
-const SCREENSHOT_SELECTOR = ".btx-screen-shell";
+const SCREENSHOT_SELECTOR = ".terminal-ready.desk-flat .terminal-source > .btx-screen";
 
 const TARGETS = [
   { id: "000-home", label: "Startseite /000", kind: "page", url: "/000" },
@@ -45,6 +45,7 @@ const TARGETS = [
           const text = node.textContent?.trim() ?? "";
           return text !== "" && text !== "STICHWORT EINGEBEN" && text !== "KEIN TREFFER";
         },
+        undefined,
         { timeout: timeoutMs },
       );
       await input.blur();
@@ -142,6 +143,7 @@ async function installVisualRegressionMode(page) {
     window.sessionStorage.setItem("btx-baud", "LINE");
     window.localStorage.setItem("btx-bit-flip-enabled", "false");
     window.localStorage.setItem("btx-bit-flip-noise", "0");
+    window.localStorage.setItem("btx-flat", "true");
     document.documentElement.dataset.visualRegression = "true";
   });
 }
@@ -190,8 +192,12 @@ async function ensureDeterministicBtxState(page, timeoutMs) {
       const line = document.querySelector("[data-btx-baud-option][value='LINE']");
       const noise = document.querySelector("[data-btx-noise-enabled]");
       const slider = document.querySelector("[data-btx-noise-level]");
+      const terminal = document.querySelector("[data-terminal]");
 
       return (
+        terminal instanceof HTMLElement &&
+        terminal.dataset.ready === "true" &&
+        terminal.classList.contains("desk-flat") &&
         line instanceof HTMLInputElement &&
         noise instanceof HTMLInputElement &&
         slider instanceof HTMLInputElement &&
@@ -200,6 +206,18 @@ async function ensureDeterministicBtxState(page, timeoutMs) {
         slider.disabled
       );
     },
+    undefined,
+    { timeout: timeoutMs },
+  );
+}
+
+async function connectForVisualCapture(page, timeoutMs) {
+  await page.locator("[data-desk-skip]").click({ timeout: timeoutMs });
+  await page.waitForFunction(
+    () =>
+      document.documentElement.dataset.connection === "online" &&
+      document.querySelector(".screen-connection")?.hasAttribute("hidden"),
+    undefined,
     { timeout: timeoutMs },
   );
 }
@@ -242,6 +260,7 @@ async function captureTargets(page, baseUrl, outputDir, options, manifestTargets
       await applyVisualRegressionStyles(page);
       await stabilizePage(page, settleMs);
       await ensureDeterministicBtxState(page, timeoutMs);
+      await connectForVisualCapture(page, timeoutMs);
 
       if (typeof target.prepare === "function") {
         await target.prepare(page, timeoutMs, settleMs);
