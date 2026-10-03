@@ -308,6 +308,11 @@ function initNavInput(signal: AbortSignal) {
       return;
     }
 
+    // Shift is needed to type the capital letter of "#H", "*S" or "*Z", so it must not cancel the armed prefix.
+    if (event.key === "Shift") {
+      return;
+    }
+
     if (event.key === "#" || event.key === "*") {
       event.preventDefault();
       armCommandPrefix(event.key as "#" | "*");

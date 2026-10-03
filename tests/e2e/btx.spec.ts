@@ -48,6 +48,20 @@ test("numerische Navigation funktioniert", async ({ page }) => {
   await expect(page).toHaveURL(/\/210$/);
 });
 
+test("befehle wie #H funktionieren mit Umschalttaste im Seiteneingabefeld", async ({ page }) => {
+  await page.goto("/340");
+  await page.getByRole("button", { name: "Direkt verbinden" }).click();
+  const navInput = page.getByLabel("Dreistellige Seitennummer");
+  await navInput.press("#");
+  await navInput.press("Shift+H");
+  await expect(page).toHaveURL(/\/000$/);
+  await expect(navInput).toHaveValue("");
+
+  await navInput.press("Shift+*");
+  await navInput.press("Shift+S");
+  await expect(page).toHaveURL(/\/800$/);
+});
+
 test("browser back und forward bleiben konsistent", async ({ page }) => {
   await page.goto("/000");
   await page.goto("/100");
