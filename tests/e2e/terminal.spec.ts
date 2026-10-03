@@ -42,8 +42,9 @@ test("connects, navigates without replacing the desk, and preserves browser hist
   await expect(page.getByLabel("Suche im Seitenfinder")).toBeVisible();
   await page.goForward();
   await expect(page.locator(".btx-status-page")).toContainText("340");
-  await page.getByLabel("Dreistellige Seitennummer").press("#");
-  await page.getByLabel("Dreistellige Seitennummer").press("h");
+  // Send one sequence within the terminal's 1.2-second command window.
+  // Two locator calls can be seconds apart on software-rendered cloud browsers.
+  await page.getByLabel("Dreistellige Seitennummer").pressSequentially("#h");
   await expect(page).toHaveURL(/\/000$/);
   expect(errors).toEqual([]);
 });

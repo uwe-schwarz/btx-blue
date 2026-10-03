@@ -52,13 +52,15 @@ test("befehle wie #H funktionieren mit Umschalttaste im Seiteneingabefeld", asyn
   await page.goto("/340");
   await page.getByRole("button", { name: "Direkt verbinden" }).click();
   const navInput = page.getByLabel("Dreistellige Seitennummer");
-  await navInput.press("#");
-  await navInput.press("Shift+H");
+  await navInput.focus();
+  await page.keyboard.press("#");
+  await page.keyboard.press("Shift+H");
   await expect(page).toHaveURL(/\/000$/);
   await expect(navInput).toHaveValue("");
 
-  await navInput.press("Shift+*");
-  await navInput.press("Shift+S");
+  await navInput.focus();
+  await page.keyboard.press("Shift+*");
+  await page.keyboard.press("Shift+S");
   await expect(page).toHaveURL(/\/800$/);
 });
 

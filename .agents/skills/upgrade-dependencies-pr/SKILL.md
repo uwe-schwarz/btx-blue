@@ -11,6 +11,10 @@ metadata:
 
 Use this skill to take a JavaScript, TypeScript, or Python repository from outdated dependencies to a reviewable dependency-upgrade PR in one pass.
 
+## Repository Publication Override
+
+In `uwe-schwarz/btx-blue`, read and apply `../deps-upgrade-autopilot/SKILL.md` before this generic workflow. Its saved-cloud preflight, locking, Healthchecks lifecycle, clean tracking `main`, normal direct push, exact-commit Workers Builds verification, production smoke, and silent scheduled reporting replace all branch/PR/review/merge publication steps below. Retain this skill's dependency inventory, release-note review, age gate, compatibility assessment, issue deduplication, and validation rules.
+
 ## Preconditions
 
 - Confirm the repository uses Git and GitHub, and that `gh` is authenticated before attempting issue or PR creation.

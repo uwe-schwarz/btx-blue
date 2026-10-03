@@ -253,10 +253,13 @@ async function captureTargets(page, baseUrl, outputDir, options, manifestTargets
 
     const files = [];
     for (let sample = 1; sample <= samples; sample += 1) {
-      await page.goto(joinUrl(baseUrl, target.url), {
+      const response = await page.goto(joinUrl(baseUrl, target.url), {
         timeout: timeoutMs,
         waitUntil: "networkidle",
       });
+      if (!response?.ok()) {
+        throw new Error(`Visual target ${target.url} returned HTTP ${response?.status()}`);
+      }
       await applyVisualRegressionStyles(page);
       await stabilizePage(page, settleMs);
       await ensureDeterministicBtxState(page, timeoutMs);
@@ -266,6 +269,12 @@ async function captureTargets(page, baseUrl, outputDir, options, manifestTargets
         await target.prepare(page, timeoutMs, settleMs);
       }
 
+      // A wrong page must never become tolerated visual "noise".
+      await page.waitForFunction(
+        (expectedPage) => document.querySelector(".btx-status-page")?.textContent?.trim() === expectedPage,
+        `SEITE ${target.url.slice(1)}`,
+        { timeout: timeoutMs },
+      );
       const screenshotRoot = page.locator(SCREENSHOT_SELECTOR);
       await screenshotRoot.waitFor({ state: "visible", timeout: timeoutMs });
 
@@ -302,7 +311,10 @@ async function runCapture(options) {
   const outputDir = resolveOutputDir(options["output-dir"], "deps-visual-capture");
   await ensureDir(outputDir);
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
+  });
 
   try {
     const { context, page } = await createBrowserContext(browser, options);

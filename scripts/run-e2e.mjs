@@ -34,7 +34,7 @@ function waitForPort(hostname, portNumber, timeoutMs = 15000) {
 
 const preview = spawn(
   "pnpm",
-  ["exec", "astro", "preview", "--host", host, "--port", String(port)],
+  ["exec", "astro", "preview", "--ignore-lock", "--host", host, "--port", String(port)],
   {
     stdio: "inherit",
     shell: false,
