@@ -51,14 +51,19 @@ test("connects, navigates without replacing the desk, and preserves browser hist
 
 test("cancels dialing and pauses then resumes the same received page", async ({ page }) => {
   await page.goto("/000");
+  await page.getByRole("button", { name: "Einstellungen", exact: true }).click();
+  await page.locator("[data-btx-baud-option][value='300']").check();
+  await page.getByRole("button", { name: "Einstellungen schließen" }).click();
   await page.getByRole("button", { name: "Verbinden", exact: true }).click();
   await page.getByRole("button", { name: "Abbrechen" }).click();
   await expect(page.locator("[data-terminal]")).toHaveAttribute("data-connection", "idle");
   await page.getByRole("button", { name: "Direkt verbinden" }).click();
+  await expect.poll(() => page.locator("[data-btx-grid]").getAttribute("style")).toContain("--btx-reveal-row");
   await page.getByRole("button", { name: "Einstellungen", exact: true }).click();
   await page.getByRole("button", { name: "Hörer herausnehmen" }).click();
   await expect(page.locator("[data-terminal]")).toHaveAttribute("data-connection", "paused");
   const before = await page.locator("[data-btx-grid]").getAttribute("style");
+  expect(before).toContain("--btx-reveal-row");
   await page.waitForTimeout(350);
   expect(await page.locator("[data-btx-grid]").getAttribute("style")).toBe(before);
   await page.getByRole("button", { name: "Hörer einsetzen", exact: true }).click();
