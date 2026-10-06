@@ -1,4 +1,4 @@
 interface:
   display_name: "Upgrade Dependencies"
-  short_description: "Upgrade deps and verify cloud deployment"
-  default_prompt: "Use $upgrade-dependencies-pr to update this project's dependencies to latest, fix small upgrade fallout, identify any relevant new features or enforced rules introduced by the upgrades, make sure no latest specifier remains in package manifests or lockfiles, and follow this repository's deps-upgrade-autopilot skill for locked direct origin/main publication and verified Cloudflare deployment."
+  short_description: "Upgrade deps; verify deployment on changes"
+  default_prompt: "Use $upgrade-dependencies-pr to update this project's dependencies to latest, fix small upgrade fallout, identify any relevant new features or enforced rules introduced by the upgrades, make sure no latest specifier remains in package manifests or lockfiles, and follow this repository's deps-upgrade-autopilot skill. For a healthy no-op, return after the complete inventory and unchanged manifest/lockfile normalization without tests, builds, screenshots, publication, or deployment; for changes, use locked direct origin/main publication and verified Cloudflare deployment."

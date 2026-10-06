@@ -13,7 +13,7 @@ Use this skill to take a JavaScript, TypeScript, or Python repository from outda
 
 ## Repository Publication Override
 
-In `uwe-schwarz/btx-blue`, read and apply `../deps-upgrade-autopilot/SKILL.md` before this generic workflow. Its saved-cloud preflight, locking, Healthchecks lifecycle, clean tracking `main`, normal direct push, exact-commit Workers Builds verification, production smoke, and silent scheduled reporting replace all branch/PR/review/merge publication steps below. Retain this skill's dependency inventory, release-note review, age gate, compatibility assessment, issue deduplication, and validation rules.
+In `uwe-schwarz/btx-blue`, read and apply `../deps-upgrade-autopilot/SKILL.md` before this generic workflow. Its saved-cloud preflight, locking, Healthchecks lifecycle, clean tracking `main`, normal direct push, exact-commit Workers Builds verification, production smoke, and silent scheduled reporting replace all branch/PR/review/merge publication steps below. Its healthy no-op return ends the run before this skill's later validation and publication steps; all existing validation rules remain required for changed runs. Retain this skill's dependency inventory, release-note review, age gate, compatibility assessment, and issue deduplication rules.
 
 ## Preconditions
 
