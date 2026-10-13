@@ -644,10 +644,7 @@ function buildTrainingPages(): BtxPageDefinition[] {
       ["Training", "Workshop", de(training.title), ...training.tags.map((tag) => de(tag))],
       [
         ...heading(de(training.title)),
-        ...textLine(
-          `${de(training.duration)} / ${de(siteContent.trainings.deliveredLabel)}: ${de(training.date)}`,
-          "dim",
-        ),
+        ...textLine(de(training.duration), "dim"),
         blank(),
         ...splitSentences(de(training.description)).flatMap((part, sentenceIndex, parts) => [
           ...textLine(part),

@@ -8,35 +8,31 @@
     "node": ">=22.19.0 <23 || >=24.0.0 <25 || >=26.0.0"
   },
   "scripts": {
-    "dev": "astro dev",
-    "cf:dev": "pnpm build && wrangler dev",
-    "build": "astro build",
-    "deploy": "pnpm build && wrangler deploy",
-    "preview": "astro preview",
+    "dev": "wrangler dev --ip 127.0.0.1",
+    "cf:dev": "pnpm run dev",
+    "build": "node scripts/build.mjs",
+    "deploy": "pnpm run deps:update && wrangler deploy",
+    "preview": "wrangler dev --ip 127.0.0.1 --port 4321",
     "deps:visual": "node ./scripts/deps-visual-check.mjs",
-    "deps:visual:preview": "astro preview --host 127.0.0.1 --port 4321",
+    "deps:visual:preview": "pnpm run preview",
     "deps:visual:install-browser": "playwright install chromium",
-    "check": "astro check",
+    "check": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "pnpm build && node scripts/run-e2e.mjs",
-    "verify": "pnpm check && pnpm test && pnpm build"
-  },
-  "dependencies": {
-    "astro": "^7.3.5",
-    "three": "^0.186.1"
+    "verify": "pnpm check && pnpm test && pnpm build",
+    "deps:update": "pnpm update --dev --no-save"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.10",
-    "@emnapi/runtime": "^1.11.3",
-    "@playwright/test": "^1.63.0",
-    "@techandsoftware/teletext-fonts": "^1.0.0",
-    "@types/node": "^26.6.4",
-    "@types/three": "^0.186.0",
-    "pixelmatch": "^7.2.0",
-    "pngjs": "^7.0.0",
-    "typescript": "^6.0.3",
-    "vite": "^8.3.2",
-    "vitest": "^5.0.3",
-    "wrangler": "^4.147.0"
+    "@playwright/test": "latest",
+    "@types/node": "latest",
+    "@types/three": "latest",
+    "esbuild": "latest",
+    "pixelmatch": "latest",
+    "pngjs": "latest",
+    "three": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "vitest": "latest",
+    "wrangler": "latest"
   }
 }

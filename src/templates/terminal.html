@@ -1,7 +1,3 @@
----
-import "@/styles/terminal.css";
----
-
 <div class="terminal-experience" data-terminal>
   <div class="desk-stage" data-desk-stage aria-label="Interaktiver BTX-Arbeitsplatz"></div>
   <nav class="desk-views" aria-label="Ansicht wählen" data-desk-views>
@@ -13,7 +9,7 @@ import "@/styles/terminal.css";
     <button type="button" data-desk-goto="coupler" aria-pressed="false">Koppler</button>
   </nav>
   <p class="desk-navhint" data-desk-navhint hidden>Ziehen: umsehen · Scrollen oder Zwei-Finger-Geste: zoomen · Rechte Maustaste: verschieben · Doppelklick: heranfahren</p>
-  <div class="terminal-source" data-terminal-source><slot /></div>
+  <div class="terminal-source" data-terminal-source>{{screen}}</div>
   <div class="desk-tooltip" data-desk-tooltip aria-hidden="true"></div>
   <div class="desk-console">
     <div class="console-plate" aria-hidden="true"><span>Btx</span> Arbeitsplatz</div>
@@ -49,8 +45,3 @@ import "@/styles/terminal.css";
     <p class="settings-footnote">Akustikkoppler: V.21 und V.23 werden als echte FSK-Signale aus den empfangenen Seitenzeichen erzeugt (1200 bit/s hin, 75 bit/s zurück). Wahl mit 10 Impulsen/s, Wählton und Freiton 425 Hz, Antwortton 2100 Hz. V.22bis und V.32 sind angenäherte Klangbilder eines Direktmodems.</p>
   </section>
 </div>
-
-<script>
-  import { initTerminal } from "./TerminalExperience";
-  void initTerminal();
-</script>

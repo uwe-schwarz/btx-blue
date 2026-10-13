@@ -4,7 +4,7 @@ import net from "node:net";
 const host = "127.0.0.1";
 const port = 4321;
 
-function waitForPort(hostname, portNumber, timeoutMs = 15000) {
+function waitForPort(hostname, portNumber, timeoutMs = 30000) {
   const start = Date.now();
 
   return new Promise((resolve, reject) => {
@@ -20,7 +20,7 @@ function waitForPort(hostname, portNumber, timeoutMs = 15000) {
         socket.destroy();
 
         if (Date.now() - start >= timeoutMs) {
-          reject(new Error(`Server auf ${hostname}:${portNumber} wurde nicht rechtzeitig erreichbar.`));
+          reject(new Error(`Server at ${hostname}:${portNumber} did not become ready in time.`));
           return;
         }
 
@@ -34,7 +34,7 @@ function waitForPort(hostname, portNumber, timeoutMs = 15000) {
 
 const preview = spawn(
   "pnpm",
-  ["exec", "astro", "preview", "--ignore-lock", "--host", host, "--port", String(port)],
+  ["run", "preview", "--port", String(port)],
   {
     stdio: "inherit",
     shell: false,

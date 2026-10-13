@@ -1,13 +1,5 @@
----
-interface Props {
-  currentPage: string;
-}
-
-const { currentPage } = Astro.props;
----
-
 <div class="btx-status-line">
-  <span class="btx-status-page" data-btx-noise-text={`SEITE ${currentPage}`}>SEITE {currentPage}</span>
+  <span class="btx-status-page" data-btx-noise-text="SEITE {{page}}">SEITE {{page}}</span>
   <form class="btx-nav-form" data-btx-nav-form>
     <label class="sr-only" for="btx-nav-input">Seite eingeben</label>
     <span class="btx-status-prompt" data-btx-noise-text="EINGABE">EINGABE</span>
