@@ -14,7 +14,7 @@ Tokens: walnut, olive wall, ivory ABS (`#d9cfb8`), farngrün (`#4a6a45`), Btx bl
 
 ## Architecture
 
-- `TerminalDesk.astro`: progressive HTML shell, accessible controls and settings.
+- `src/templates/terminal.html`: progressive HTML shell, accessible controls and settings.
 - `TerminalExperience.ts`: the call choreography (lift, dial, answer, couple, hang up), preferences, the terminal's local teletext screens, keyboard and back-channel keystrokes, and the flat fallback.
 - `DeskScene.ts`: renderer, lights, post-processing (GTAO, bloom, film grade), adaptive quality, camera, handset tween, dial animation, LEDs and picking. It renders only while something changes.
 - `scene/raster.ts`: paints the live 40×24 Btx DOM (reveal progress, hover, focused inputs, block cursor) into a canvas. The HTML screen stays in place over the tube, invisible but fully interactive and accessible.

@@ -5,6 +5,10 @@
   "main": "./src/worker.ts",
   // Keep traffic on the custom domain. Flip this to true if you also want a workers.dev URL.
   "workers_dev": false,
+  "build": {
+    "command": "pnpm run build",
+    "watch_dir": ["src", "scripts", "public"]
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

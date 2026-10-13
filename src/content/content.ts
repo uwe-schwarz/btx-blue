@@ -128,7 +128,6 @@ interface ContactSection {
   phone: string;
   phoneLabel: LocalizedString;
   socialLinks: {
-    bluesky?: string;
     freelancermap?: string;
     github?: string;
     linkedin?: string;
@@ -194,7 +193,6 @@ interface SitemapSection {
 }
 
 export interface TrainingOffering {
-  date: LocalizedString;
   description: LocalizedString;
   duration: LocalizedString;
   tags: Array<LocalizedString>;
@@ -202,7 +200,6 @@ export interface TrainingOffering {
 }
 
 interface TrainingsSection {
-  deliveredLabel: LocalizedString;
   items: Array<TrainingOffering>;
   subtitle: LocalizedString;
   title: LocalizedString;
@@ -448,67 +445,69 @@ export const siteContent: SiteContent = {
       },
     },
     {
-      company: "Deutsche Rentenversicherung (RP, BW)",
+      company: "Deutsche Rentenversicherung",
       description: [
         {
           text: {
-            de: "Technische Programmverantwortung für die IPv6-Migration bei DRV RP und DRV BW mit Fokus auf Migrationsplanung, Umsetzungsstruktur und übergreifende technische Steuerung.",
-            en: "Technical program ownership for the IPv6 migration at DRV RP and DRV BW, with a focus on migration planning, execution structure, and cross-functional technical coordination.",
+            de: "Technische Programmverantwortung für die IPv6-Migration. Schwerpunkte sind die Migrationsplanung, die Netzwerkarchitektur und das IP-Adressmanagement mit Infoblox.",
+            en: "Technical program ownership for the IPv6 migration. Key areas include migration planning, network architecture, and IP address management with Infoblox.",
           },
           type: "text",
         },
         {
           text: {
-            de: "Konzeption und Einführung eines operativen Steuerungsmodells mit Dashboard, Action Board, KPI-Portfolio, Risikoregister und Entscheidungsindex zur strukturierten Übersetzung technischer Themen in belastbare Delivery-Artefakte.",
-            en: "Designed and implemented an operational control model with dashboard, action board, KPI portfolio, risk register, and decision index to translate technical topics into structured delivery artifacts.",
+            de: "Konzeption der IPv6-Adressierung und Abstimmung der Abbildung in Infoblox als Grundlage für eine konsistente Verwaltung von Adressräumen und Netzsegmenten im Dual-Stack-Betrieb.",
+            en: "Designed the IPv6 addressing scheme and coordinated its representation in Infoblox to support consistent management of address spaces and network segments in dual-stack operation.",
           },
           type: "text",
         },
         {
           text: {
-            de: "Koordination der technischen Vorarbeiten für Architektur und Rollout über IPv6-Adressierung, Segmentierung, Dual-Stack-Zielbild, Testlabor-Planung und teamübergreifende Abhängigkeiten hinweg.",
-            en: "Coordinated technical groundwork for architecture and rollout across IPv6 addressing, segmentation, dual-stack target design, test-lab planning, and cross-team dependencies.",
+            de: "Koordination der technischen Vorarbeiten für Testlabor und Rollout sowie Abstimmung der Abhängigkeiten zwischen Netzwerkbetrieb, Architektur und Informationssicherheit.",
+            en: "Coordinated technical groundwork for the test lab and rollout, aligning dependencies between network operations, architecture, and information security.",
           },
           type: "text",
         },
         {
           text: {
-            de: "Begleitung sicherheits- und compliance-relevanter Anforderungen mit Bezug auf BSI, NIS2 und KRITIS sowie deren Überführung in nachvollziehbare Nachweise, Risiken und Management-Reporting.",
-            en: "Supported security- and compliance-related requirements in the context of BSI, NIS2, and critical infrastructure, translating them into traceable evidence, risks, and management reporting.",
+            de: "Berücksichtigung sicherheits- und compliance-relevanter Anforderungen im Kontext von BSI, NIS2 und KRITIS sowie deren Überführung in nachvollziehbare Nachweise und Management-Reporting.",
+            en: "Addressed security and compliance requirements in the context of BSI, NIS2, and critical infrastructure, translating them into traceable evidence and management reporting.",
           },
           type: "text",
         },
         {
           text: {
-            de: "Etablierung eines wiederverwendbaren Intake-to-Governance-Workflows zur systematischen Erfassung technischer Actions, Risiken, offener Punkte und Nachweisanforderungen.",
-            en: "Established a reusable intake-to-governance workflow for systematically capturing technical actions, risks, open issues, and evidence requirements.",
+            de: "Aufbau einer übergreifenden Programmsteuerung mit Dashboard, KPI-Portfolio, Risikoregister und dokumentierten Entscheidungen.",
+            en: "Established program-wide coordination with a dashboard, KPI portfolio, risk register, and documented decisions.",
           },
           type: "achievement",
         },
         {
           text: {
-            de: "Schaffung einer operativen Baseline für die technische Programmausführung mit messbaren KPIs, klaren Verantwortlichkeiten und transparenter Entscheidungsgrundlage.",
-            en: "Created an operational baseline for technical program execution with measurable KPIs, clear ownership, and transparent decision support.",
+            de: "Schaffung einer operativen Grundlage für die Migration mit klaren Verantwortlichkeiten, messbaren Fortschritten und abgestimmten Umsetzungsschritten.",
+            en: "Created an operational foundation for the migration with clear ownership, measurable progress, and agreed implementation steps.",
           },
           type: "achievement",
         },
       ],
       location: {
-        de: "Karlsruhe & Speyer, Deutschland",
-        en: "Karlsruhe & Speyer, Germany",
+        de: "Deutschland",
+        en: "Germany",
       },
       logoUrl: "/logos/drv.svg",
       period: { de: "Jan 2026 - Heute", en: "Jan 2026 - Today" },
       tags: [
+        { de: "IPv6", en: "IPv6" },
+        { de: "Infoblox", en: "Infoblox" },
+        { de: "IPAM", en: "IPAM" },
+        { de: "Adressmanagement", en: "Address Management" },
+        { de: "Netzwerkarchitektur", en: "Network Architecture" },
+        { de: "Dual Stack", en: "Dual Stack" },
+        { de: "Segmentierung", en: "Network Segmentation" },
         {
           de: "Technische Programmsteuerung",
           en: "Technical Program Leadership",
         },
-        { de: "IPv6", en: "IPv6" },
-        { de: "Netzwerkarchitektur", en: "Network Architecture" },
-        { de: "Dual Stack", en: "Dual Stack" },
-        { de: "Adressmanagement", en: "Address Management" },
-        { de: "Segmentierung", en: "Network Segmentation" },
         { de: "Testlabor-Planung", en: "Test Lab Planning" },
         { de: "Rollout-Vorbereitung", en: "Rollout Preparation" },
         { de: "BSI", en: "BSI" },
@@ -521,11 +520,10 @@ export const siteContent: SiteContent = {
         { de: "Atlassian Jira", en: "Atlassian Jira" },
         { de: "Confluence", en: "Confluence" },
         { de: "Microsoft PowerPoint", en: "Microsoft PowerPoint" },
-        { de: "Infoblox (IPAM)", en: "Infoblox (IPAM)" },
       ],
       title: {
-        de: "Technische Programmleitung IPv6-Migration",
-        en: "Technical Program Lead IPv6 Migration",
+        de: "Technische Programmleitung IPv6-Migration & IP-Adressmanagement mit Infoblox",
+        en: "Technical Program Lead IPv6 Migration & IP Address Management with Infoblox",
       },
     },
     {
@@ -1311,12 +1309,12 @@ export const siteContent: SiteContent = {
         de: "{percent}% verfügbar",
         en: "{percent}% available",
       },
-      currentPercentAvailable: 75,
+      currentPercentAvailable: 10,
       fullLine: {
         de: "100% ab {date}",
         en: "100% from {date}",
       },
-      fullyAvailableDate: "2027-01-01",
+      fullyAvailableDate: "2027",
       title: {
         de: "Verfügbarkeit",
         en: "Availability",
@@ -1445,6 +1443,7 @@ export const siteContent: SiteContent = {
   navigation: [
     { href: "#hero", label: { de: "Start", en: "Home" } },
     { href: "#about", label: { de: "Über mich", en: "About" } },
+    { href: "#trainings", label: { de: "Trainings", en: "Trainings" } },
     { href: "#experience", label: { de: "Erfahrung", en: "Experience" } },
     { href: "#projects", label: { de: "Projekte", en: "Projects" } },
     { href: "#skills", label: { de: "Fähigkeiten", en: "Skills" } },
@@ -1532,19 +1531,11 @@ export const siteContent: SiteContent = {
             },
             en: "Resend: 2261 Market Street #5039, San Francisco, CA 94114, USA",
           },
-          {
-            de: "Umami Software, Inc.: 1362 42nd Ave., San Francisco, CA, 94122, USA",
-            description: {
-              de: "Rechtsgrundlage: berechtigte Interessen (Art. 6 Abs. 1 lit. f DSGVO) zur Durchführung der Website-Analyse in datenschutzfreundlicher Weise.<br />Umami ist ein datenschutzbewusstes Web-Analytics-Tool, das in seiner Standardkonfiguration keine Cookies verwendet und keine personenbezogenen Kennungen erhebt. Details: https://umami.is/privacy.",
-              en: "Legal basis: legitimate interests (Art. 6(1)(f) GDPR) to enable website-analytics in a privacy-respective way.<br />Umami is a privacy-aware web analytics tool that does not use cookies or collect personal identifiers in its standard configuration. See: https://umami.is/privacy.",
-            },
-            en: "Umami Software, Inc.: 1362 42nd Ave., San Francisco, CA, 94122, USA",
-          },
         ],
         paragraphs: [
           {
-            de: "Diese Seite wird bei Cloudflare gehostet; ich habe dort keinen direkten Zugriff auf Server-Logs oder Deine IP-Adresse. Für das Kontaktformular nutze ich Resend, um E-Mails zu versenden. Es werden nur die von Dir im Formular eingegebenen Daten weitergeleitet – weitere personenbezogene Daten werden nicht gespeichert. Umami wird für Analysen verwendet und speichert nur pseudonymisierte Daten.",
-            en: "This site is hosted by Cloudflare; I do not have direct access to server logs or your IP address there. For the contact form, I use Resend to send emails. Only the data you enter into the form is forwarded – no other personal data is stored. Umami is used for analytics and stores only pseudonymous data.",
+            de: "Diese Seite wird bei Cloudflare gehostet; ich habe dort keinen direkten Zugriff auf Server-Logs oder Deine IP-Adresse. Für das Kontaktformular nutze ich Resend, um E-Mails zu versenden. Es werden nur die von Dir im Formular eingegebenen Daten weitergeleitet – weitere personenbezogene Daten werden nicht gespeichert.",
+            en: "This site is hosted by Cloudflare; I do not have direct access to server logs or your IP address there. For the contact form, I use Resend to send emails. Only the data you enter into the form is forwarded – no other personal data is stored.",
           },
           {
             de: "Log-Aufbewahrung: max. 30 Tage",
@@ -2196,13 +2187,8 @@ export const siteContent: SiteContent = {
     },
   },
   trainings: {
-    deliveredLabel: {
-      de: "Durchgeführt",
-      en: "Delivered",
-    },
     items: [
       {
-        date: { de: "2.–3. Juni 2026", en: "June 2–3, 2026" },
         description: {
           de: "Von den Grundlagen moderner Lastverteilung bis zum produktionsreifen Setup: Architektur, Konfiguration, TLS-Terminierung, Health Checks, Hochverfügbarkeit und Observability – mit vielen Hands-on-Übungen entlang realer Szenarien.",
           en: "From the fundamentals of modern load balancing to production-ready setups: architecture, configuration, TLS termination, health checks, high availability, and observability — with extensive hands-on labs built around real-world scenarios.",
@@ -2221,7 +2207,6 @@ export const siteContent: SiteContent = {
         },
       },
       {
-        date: { de: "2.–3. Juli 2026", en: "July 2–3, 2026" },
         description: {
           de: "Wie aus Sprachmodellen verlässliche Automatisierung wird: Agenten-Architekturen, Tool-Nutzung, Orchestrierung mehrstufiger Workflows, Guardrails, Evaluierung und Sicherheit – inklusive Hands-on-Sessions mit aktuellen Frameworks.",
           en: "How language models become reliable automation: agent architectures, tool use, orchestration of multi-step workflows, guardrails, evaluation, and security — including hands-on sessions with current frameworks.",
@@ -2237,6 +2222,24 @@ export const siteContent: SiteContent = {
         title: {
           de: "Agentic-AI-Workflows",
           en: "Agentic AI Workflows",
+        },
+      },
+      {
+        description: {
+          de: "Wie KI-Systeme nach dem Deployment zuverlässig, transparent und wirtschaftlich betrieben werden: MLOps-Pipelines, Modell- und Datenmonitoring, Observability, Qualitätsmetriken, Drift-Erkennung und wirksame Kostenkontrolle – praxisnah mit messbaren Betriebszielen und Hands-on-Übungen.",
+          en: "How to operate AI systems reliably, transparently, and cost-effectively after deployment: MLOps pipelines, model and data monitoring, observability, quality metrics, drift detection, and effective cost control — with hands-on exercises built around measurable operational goals.",
+        },
+        duration: { de: "2-tägiges Training", en: "2-day training" },
+        tags: [
+          { de: "MLOps", en: "MLOps" },
+          { de: "Monitoring", en: "Monitoring" },
+          { de: "Observability", en: "Observability" },
+          { de: "Drift-Erkennung", en: "Drift Detection" },
+          { de: "Kostenkontrolle", en: "Cost Control" },
+        ],
+        title: {
+          de: "MLOps, Monitoring, Kostenkontrolle",
+          en: "MLOps, Monitoring & Cost Control",
         },
       },
     ],
