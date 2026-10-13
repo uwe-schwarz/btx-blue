@@ -11,7 +11,7 @@
     "dev": "wrangler dev --ip 127.0.0.1",
     "cf:dev": "pnpm run dev",
     "build": "node scripts/build.mjs",
-    "deploy": "wrangler deploy",
+    "deploy": "pnpm run deps:update && wrangler deploy",
     "preview": "wrangler dev --ip 127.0.0.1 --port 4321",
     "deps:visual": "node ./scripts/deps-visual-check.mjs",
     "deps:visual:preview": "pnpm run preview",
