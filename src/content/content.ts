@@ -1653,8 +1653,8 @@ export const siteContent: SiteContent = {
       },
     ],
     subtitle: {
-      de: "Letzte Aktualisierung: 02. August 2025",
-      en: "Last updated: August 02, 2025",
+      de: "Letzte Aktualisierung: 2026-10-13",
+      en: "Last updated: 2026-10-13",
     },
     title: {
       de: "Datenschutzerklärung",
