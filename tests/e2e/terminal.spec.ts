@@ -4,6 +4,9 @@ test("dials 01910 on the rotary dial, couples the handset and shows the call cha
   test.setTimeout(90000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.text().includes("Modem worklet unavailable")) errors.push(message.text());
+  });
   await page.goto("/000");
   await expect(page.locator("[data-terminal]")).toHaveAttribute("data-ready", "true", { timeout: 20000 });
   // In 3D the phosphor is drawn by WebGL; the HTML screen stays interactive underneath.
