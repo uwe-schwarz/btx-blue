@@ -28,6 +28,7 @@ const output = {
   entryFileNames: "[name]-[hash].js",
   chunkFileNames: "[name]-[hash].js",
 };
+/** Build to disk or memory and release Rolldown resources even if generation fails. */
 async function bundle(options, outputOptions, write = true) {
   const build = await rolldown(options);
   try {
